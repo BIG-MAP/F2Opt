@@ -18,7 +18,7 @@ class Broker:
 
     def ping(self):
         """Ping the broker server."""
-        res = requests.get(f"{self.url}/docs")
+        res = requests.get(self.url + "/docs")
         if res.ok:
             logger.info(f"Ping: {res.status_code} {res.reason}")
         else:
@@ -28,7 +28,7 @@ class Broker:
     def authenticate(self):
         """Authenticate with the broker server and get auth token."""
         res = requests.post(
-            f"{self.url}/user_management/authenticate/",
+            self.url + "/user_management/authenticate",
             data={"username": self.username, "password": self.password, "grant_type": "password"},
             headers={"content-type": "application/x-www-form-urlencoded"}
         )
@@ -43,7 +43,7 @@ class Broker:
         """Get capabilities."""
         assert self.auth_header is not None, "Not authenticated."
         res = requests.get(
-            self.url + "/get/capabilities",
+            self.url + "/capabilities",
             params={"currently_available": available},
             headers=self.auth_header,
         )
@@ -55,11 +55,27 @@ class Broker:
             logger.warning(f"Get capabilities: {res.status_code}, {res.reason}")
             return []
 
+    def get_limitations(self, available=True):
+        """Get limitations."""
+        assert self.auth_header is not None, "Not authenticated."
+        res = requests.get(
+            self.url + "/limitations",
+            params={"currently_available": available},
+            headers=self.auth_header,
+        )
+        if res.ok:
+            logger.info(f"Get limitations: {res.status_code}, {res.reason}")
+            limitations = res.json()
+            return limitations
+        else:
+            logger.warning(f"Get limitations: {res.status_code}, {res.reason}")
+            return []
+
     def get_results(self, quantity=None, method=None):
         """Get results."""
         assert self.auth_header is not None, "Not authenticated."
         res = requests.get(
-            self.url + "/get/all_results",
+            self.url + "/results_requested",
             params={"quantity": quantity, "method": method},
             headers=self.auth_header,
         )
@@ -80,7 +96,7 @@ class Broker:
             logger.info("Post result: shadow mode")
             return "result_shadow_id"
         res = requests.post(
-            self.url + "/post/result",
+            self.url + "/results",
             json=result,
             headers=self.auth_header,
         )
@@ -92,18 +108,19 @@ class Broker:
             logger.warning(f"Post result: {res.status_code}, {res.reason}")
             return None
 
-    def get_pending_requests(self):
+    def get_pending_requests(self, quantity=None, method=None):
         """Get pending requests."""
         assert self.auth_header is not None, "Not authenticated."
         res = requests.get(
-            self.url + "/get/pending_requests",
+            self.url + "/pending_requests",
+            params={"quantity": quantity, "method": method},
             headers=self.auth_header,
         )
         if res.ok:
             logger.info(f"Get pending requests: {res.status_code}, {res.reason}")
-            requests_ = res.json()
-            # TODO: validate requests_
-            return requests_
+            pending_requests = res.json()
+            # TODO: validate pending requests
+            return pending_requests
         else:
             logger.warning(f"Get pending requests: {res.status_code}, {res.reason}")
             return []
@@ -116,7 +133,7 @@ class Broker:
             logger.info("Post request: shadow mode")
             return "request_shadow_id"
         res = requests.post(
-            self.url + "/post/request",
+            self.url + "/requests",
             json=request,
             headers=self.auth_header,
         )
