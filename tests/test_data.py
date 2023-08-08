@@ -1,6 +1,7 @@
 import unittest
 
 from src import data, schemas
+from src.broker import MockBroker
 
 
 class TestData(unittest.TestCase):
@@ -298,6 +299,31 @@ class TestData(unittest.TestCase):
         self.assertIn("test_method", candidates.keys())
         candidate = candidates["test_method"]
         self.assertEqual(candidate["target"]["name"], "test_target")
+        requests = data.get_requests_from_candidate(config, candidate)
+        self.assertEqual(len(requests), 1)
+        schemas.Request(**requests[0])  # Validate request with schema
+
+    def test_integration_with_mock_broker(self):
+        config = {
+            "name": "mock_optimiser",
+            "targets": [{
+                "name": "mock_target",
+                "quantities": {"mock_quantity": "mock_quantity"},
+                "method": "mock_method",
+                "defaults": {"temperature": 300},
+                "max_queue_size": 1,
+            }]
+        }
+        broker = MockBroker(authenticated=True, compute_results=False)
+        limitations = broker.get_limitations()
+        constraints = data.get_constraints_from_method_limitations(limitations)
+        self.assertIn("mock_method", constraints)
+        self.assertEqual(len(constraints["mock_method"]), 1)
+        df = None  # TODO: Add dataframe of observed data for data based approach
+        candidates = data.get_best_candidates(config, df, constraints)
+        self.assertIn("mock_method", candidates.keys())
+        candidate = candidates["mock_method"]
+        self.assertEqual(candidate["target"]["name"], "mock_target")
         requests = data.get_requests_from_candidate(config, candidate)
         self.assertEqual(len(requests), 1)
         schemas.Request(**requests[0])  # Validate request with schema
