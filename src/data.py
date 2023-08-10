@@ -130,19 +130,81 @@ def get_constraints_from_fraction(fraction):
 
 
 def get_dataframe_from_results(config, results):
-    """Create dataframe from results."""
-    raise NotImplementedError
+    """Create dataframe from results.
+
+    Args:
+        config (dict): Optimiser configuration.
+        results (dict): Collection of results in dict format.
+    Returns:
+        Dataframe with results.
+    """
+    task_dfs = []  # List of dataframes for each task
+    # TODO: Iterate config instead?
+    for task_name, task_results in results.items():
+        assert len(task_results) == 1  # TODO: Only support for one quantity per method
+        quantity_dfs = []  # List of dataframes for each quantity in the task
+        for quantity, results_list in task_results.items():
+            if len(results_list) == 0:
+                continue
+            else:
+                rows = [get_row_from_result(result) for result in results_list]
+                quantity_df = pd.DataFrame(rows)
+                quantity_df["task"] = task_name
+                # TODO: Rename columns: quantity to objective?
+                quantity_dfs.append(quantity_df)
+        if len(quantity_dfs) == 0:
+            continue
+        else:
+            # TODO: Outer join quantity dfs on request internal reference (and chemical fractions)
+            assert len(quantity_dfs) == 1  # TODO: Only support for one quantity per method
+            task_df = quantity_dfs[0]  # TODO: Outer join instead
+            task_dfs.append(task_df)
+    if len(task_dfs) == 0:
+        # Return empty dataframe
+        return pd.DataFrame()
+    else:
+        # Stack task dataframes
+        df = pd.concat(task_dfs, axis=0, ignore_index=True)
+        # Sort columns by name
+        df = df.reindex(sorted(df.columns), axis=1)
+        assert df["result_id"].is_unique  # One row per result id
+        assert df["request_id"].is_unique  # One row per request id
+        return df
 
 
 def get_row_from_result(result):
-    """Create row from result."""
-    raise NotImplementedError
+    """Create row dict from a single result.
+
+    Args:
+        result (dict): A single result in dict format.
+    Returns:
+        A flat dict representing a dataframe row with the result.
+    """
+    assert len(result["result"]["method"]) == 1
+    row = {}
+    row["result_id"] = result["uuid"]
+    row["ctime"] = result["ctime"]
+    row["quantity"] = result["result"]["quantity"]
+    row["method"] = result["result"]["method"][0]
+    # TODO: request_id is not the same as the request internal reference
+    row["request_id"] = result["result"]["request_uuid"]
+    formulation = result["result"]["data"]["run_info"]["formulation"]
+    for formulation_component in formulation:
+        smiles = formulation_component["chemical"]["SMILES"]
+        fraction = formulation_component["fraction"]
+        row[f"x.{smiles}"] = fraction
+    quantity = result["result"]["data"][result["result"]["quantity"]]
+    values = quantity["values"]
+    value = sum(values) / len(values)  # Compute the mean value
+    row["y."+result["result"]["quantity"]] = value
+    row["temperature"] = quantity["temperature"]
+    return row
 
 
 # Requests
 
 
-def get_candidates_from_method_constraints(constraints_list, num_samples=1):
+def get_candidates_from_constraints(constraints_list, num_samples=1):
     """Get dataframe of candidate compositions from list of constraints.
 
     Args:
@@ -166,6 +228,7 @@ def get_candidates_from_method_constraints(constraints_list, num_samples=1):
             tolerance=formulation["tolerance"],
             num_samples=num_samples,
         )
+        # TODO: Perhaps the columns should be 'x.SMILES'
         columns = [chem["SMILES"] for chem in formulation["chemicals"]]
         dfs.append(pd.DataFrame(compositions, columns=columns))
     # Stack candidate samples and fill missing values with zeros
@@ -174,48 +237,46 @@ def get_candidates_from_method_constraints(constraints_list, num_samples=1):
 
 
 def get_best_candidates(config, df, constraints):
-    """Get best candidates for all target methods and quantities.
+    """Get best candidates for each task and quantity.
 
     Args:
         config (dict): Optimiser configuration.
-        df (pandas.DataFrame): Dataframe of observed data.
-        constraints (dict): Constraints for each method.
+        df (pandas.DataFrame): Dataframe of observed results.
+        constraints (dict): Constraints for each task.
     Returns:
-        Dict of best candidates for each target method.
+        Dict of best candidates for each task.
     """
+    # TODO: Handle empty and small dataframes
     # TODO: Check df has the correct columns (chemicals and quantities)
-    result = {}  # {method: candidate}
+    # TODO: Results columns are 'x.SMILES' whereas candidate columns are just 'SMILES'
+    candidate_list = []
     for target in config["targets"]:
-        # method_name = method_config["method"]
-        method_constraints = constraints[target["method"]]
-        assert all(cons["method"] == target["method"] for cons in method_constraints)
+        method_constraints_list = constraints[target["method"]]
+        assert all(mc["method"] == target["method"] for mc in method_constraints_list)
         # Create dict of all chemicals included in the method constraints
-        all_chemicals = {}  # {smiles: chemical}
-        for cons in method_constraints:
-            for chemical in cons["formulation"]["chemicals"]:
-                all_chemicals[chemical["SMILES"]] = chemical
+        smiles_to_chemicals = {}  # {smiles: chemical}
+        for method_constraints in method_constraints_list:
+            for chemical in method_constraints["formulation"]["chemicals"]:
+                smiles_to_chemicals[chemical["SMILES"]] = chemical
         # Get dataframe of candidates for the method
         # TODO: Use config to set number of samples
-        candidates_df = get_candidates_from_method_constraints(method_constraints, num_samples=1)
+        candidates_df = get_candidates_from_constraints(method_constraints_list, num_samples=1)
         # Get random candidate for the method
         # TODO: Implement data-driven optimisation instead of random sampling
-        candidate_row = candidates_df.sample(n=1)  # Sample row
+        candidate_row = candidates_df.sample(n=1).squeeze()  # Sample one row as Series
         # Extract chemicals and fractions from row
-        chemicals = [all_chemicals[smiles] for smiles in candidate_row.columns]
-        fractions = candidate_row.values[0].tolist()
+        chemicals = [smiles_to_chemicals[smiles] for smiles in candidate_row.index]
+        fractions = candidate_row.values.tolist()
         assert len(chemicals) == len(fractions)
-        # Prepare candidate
+        # Prepare candidate dict
         candidate = {
-            # "quantity": target["quantity"],
-            # "method": target["method"],
             "target": target,
-            # "method_constraints": method_constraints,
             "chemicals": chemicals,
             "fractions": fractions,
-            # "objectives": None,  # TODO: Include the predicted value?
+            # "predictions": None,  # TODO: Include the predicted quantities?
         }
-        result[target["method"]] = candidate
-    return result
+        candidate_list.append(candidate)
+    return candidate_list
 
 
 def get_requests_from_candidate(config, candidate):
@@ -227,9 +288,8 @@ def get_requests_from_candidate(config, candidate):
     Returns:
         List of requests.
     """
-    target = candidate["target"]
-    # Formulation: List[FINALES2_schemas.classes_common.FormulationComponent]
-    formulation = []
+    target = candidate["target"]  # Target configuration
+    formulation = []  # List of formulation components
     for chemical, fraction in zip(candidate["chemicals"], candidate["fractions"]):
         formulation_component = {
             "chemical": chemical,
@@ -237,15 +297,15 @@ def get_requests_from_candidate(config, candidate):
             "fraction_type": "molPerMol"
         }
         formulation.append(formulation_component)
-    # FINALES2_schemas.classes_input...
     parameters = {
         "formulation": formulation,
         "temperature": target["defaults"]["temperature"],
     }
-    requests = []
+    # In mult-objective optimisation, create a request for each quantity
+    # Use a common identifier for the requests so they can be matched
     identifier = f"{config['name']}_{datetime.now().isoformat()}"
+    requests = []
     for quantity in target["quantities"].keys():
-        # FINALES2.server.schemas.Request
         request = {
             "quantity": quantity,
             "methods": [target["method"]],
