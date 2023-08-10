@@ -16,43 +16,43 @@ from .composition import sample_compositions_with_constraints
 # Constraints
 
 
-def get_constraints_from_method_limitations(method_limitations):
-    """Get constraints for each method.
+def get_constraints_from_limitations(limitations):
+    """Get constraints for each task.
 
     Args:
-        method_limitations (list): A list of methods with limitations.
+        limitations (dict): A dict of tasks and limitations.
     Returns:
-        Constraints dict: {method: constraints}.
+        Constraints dict: {task: constraints}.
     """
     constraints = {}
-    for method in method_limitations:
-        constraints[method["method"]] = get_constraints_from_method(method)
+    for task_name, task_limitations in limitations.items():
+        constraints[task_name] = get_constraints_list_from_task_limitations(task_limitations)
     return constraints
 
 
-def get_constraints_from_method(method):
-    """Get constraints from method limitations.
+def get_constraints_list_from_task_limitations(task):
+    """Get constraints from task limitations.
 
     Args:
-        method (dict): A method with limitations.
+        task (dict): A dict with limitations for a task.
     Returns:
-        List of method constraints dicts.
+        List of task constraints dicts.
     """
-    # Extract limitation from method
-    assert len(method["limitations"]) == 1
-    limitations = method["limitations"][0]
+    # Extract limitation
+    assert len(task["limitations"]) == 1
+    limitations = task["limitations"][0]
     # Extract constraints for each formulation limitations
-    constraints = []
+    constraints_list = []
     for formulation in limitations["formulation"]:
-        constraints.append({
-            "quantity": method["quantity"],
-            "method": method["method"],
-            "formulation": get_constraints_from_formulation(formulation),
+        constraints_list.append({
+            "quantity": task["quantity"],
+            "method": task["method"],
+            "formulation": get_constraints_from_formulation_limitations(formulation),
         })
-    return constraints
+    return constraints_list
 
 
-def get_constraints_from_formulation(formulation):
+def get_constraints_from_formulation_limitations(formulation):
     """Get formulation constraints from formulation limitations.
 
     Args:
@@ -63,7 +63,7 @@ def get_constraints_from_formulation(formulation):
     chemicals, lower, upper, tolerance = [], [], [], []
     for chemical in formulation:
         chemicals.append(chemical["chemical"])
-        l, u, t = get_constraints_from_fraction(chemical["fraction"])
+        l, u, t = get_constraints_from_fraction_limitations(chemical["fraction"])
         lower.append(l)
         upper.append(u)
         tolerance.append(t)
@@ -74,7 +74,7 @@ def get_constraints_from_formulation(formulation):
     return constraints
 
 
-def get_constraints_from_fraction(fraction):
+def get_constraints_from_fraction_limitations(fraction):
     """Get fraction constraints from fraction limitations.
 
     Returns lower bound, upper bound and tolerance.
@@ -134,14 +134,14 @@ def get_dataframe_from_results(config, results):
 
     Args:
         config (dict): Optimiser configuration.
-        results (dict): Collection of results in dict format.
+        results (dict): Collection of task results in dict format.
     Returns:
         Dataframe with results.
     """
     task_dfs = []  # List of dataframes for each task
-    # TODO: Iterate config instead?
-    for task_name, task_results in results.items():
-        assert len(task_results) == 1  # TODO: Only support for one quantity per method
+    for task in [t for t in config["tasks"] if t["source"]]:
+        task_results = results[task["name"]]
+        assert len(task_results) == 1  # TODO: Only support for one quantity per task
         quantity_dfs = []  # List of dataframes for each quantity in the task
         for quantity, results_list in task_results.items():
             if len(results_list) == 0:
@@ -149,7 +149,7 @@ def get_dataframe_from_results(config, results):
             else:
                 rows = [get_row_from_result(result) for result in results_list]
                 quantity_df = pd.DataFrame(rows)
-                quantity_df["task"] = task_name
+                quantity_df["task"] = task["name"]
                 # TODO: Rename columns: quantity to objective?
                 quantity_dfs.append(quantity_df)
         if len(quantity_dfs) == 0:
@@ -208,7 +208,7 @@ def get_candidates_from_constraints(constraints_list, num_samples=1):
     """Get dataframe of candidate compositions from list of constraints.
 
     Args:
-        constraints_list (list): A list of constraints for a single method.
+        constraints_list (list): A list of constraints for a single task.
         num_samples (int): Number of samples per set of constraints.
     Returns:
         Dataframe of candidates with columns for each chemical.
@@ -250,17 +250,17 @@ def get_best_candidates(config, df, constraints):
     # TODO: Check df has the correct columns (chemicals and quantities)
     # TODO: Results columns are 'x.SMILES' whereas candidate columns are just 'SMILES'
     candidate_list = []
-    for target in config["targets"]:
-        method_constraints_list = constraints[target["method"]]
-        assert all(mc["method"] == target["method"] for mc in method_constraints_list)
+    for task in [t for t in config["tasks"] if t["request"]]:
+        task_constraints_list = constraints[task["name"]]
+        assert all(tc["method"] == task["method"] for tc in task_constraints_list)
         # Create dict of all chemicals included in the method constraints
         smiles_to_chemicals = {}  # {smiles: chemical}
-        for method_constraints in method_constraints_list:
-            for chemical in method_constraints["formulation"]["chemicals"]:
+        for task_constraints in task_constraints_list:
+            for chemical in task_constraints["formulation"]["chemicals"]:
                 smiles_to_chemicals[chemical["SMILES"]] = chemical
         # Get dataframe of candidates for the method
         # TODO: Use config to set number of samples
-        candidates_df = get_candidates_from_constraints(method_constraints_list, num_samples=1)
+        candidates_df = get_candidates_from_constraints(task_constraints_list, num_samples=1)
         # Get random candidate for the method
         # TODO: Implement data-driven optimisation instead of random sampling
         candidate_row = candidates_df.sample(n=1).squeeze()  # Sample one row as Series
@@ -270,9 +270,9 @@ def get_best_candidates(config, df, constraints):
         assert len(chemicals) == len(fractions)
         # Prepare candidate dict
         candidate = {
-            "target": target,
-            "chemicals": chemicals,
-            "fractions": fractions,
+            "task": task,  # Task configuration
+            "chemicals": chemicals,  # List of chemical dicts
+            "fractions": fractions,  # List of fractions
             # "predictions": None,  # TODO: Include the predicted quantities?
         }
         candidate_list.append(candidate)
@@ -288,7 +288,7 @@ def get_requests_from_candidate(config, candidate):
     Returns:
         List of requests.
     """
-    target = candidate["target"]  # Target configuration
+    task = candidate["task"]  # Task configuration
     formulation = []  # List of formulation components
     for chemical, fraction in zip(candidate["chemicals"], candidate["fractions"]):
         formulation_component = {
@@ -299,17 +299,17 @@ def get_requests_from_candidate(config, candidate):
         formulation.append(formulation_component)
     parameters = {
         "formulation": formulation,
-        "temperature": target["defaults"]["temperature"],
+        "temperature": task["parameters"]["temperature"],
     }
     # In mult-objective optimisation, create a request for each quantity
     # Use a common identifier for the requests so they can be matched
     identifier = f"{config['name']}_{datetime.now().isoformat()}"
     requests = []
-    for quantity in target["quantities"].keys():
+    for quantity in task["quantities"].keys():
         request = {
             "quantity": quantity,
-            "methods": [target["method"]],
-            "parameters": {target["method"]: parameters},
+            "methods": [task["method"]],
+            "parameters": {task["method"]: parameters},
             "tenant_uuid": identifier,
         }
         schemas.Request(**request)  # Validate request with schema

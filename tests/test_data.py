@@ -1,5 +1,7 @@
 import unittest
 
+import pandas as pd
+
 from src import data, schemas
 from src.broker import MockBroker
 
@@ -8,28 +10,33 @@ class TestData(unittest.TestCase):
 
     def test_get_dataframe_from_results(self):
         config = {
-            "name": "test_optimiser",
-            "sources": [
+            "name": "otest",
+            "objectives": [],
+            "tasks": [
                 {
-                    "name": "test_source_1",
+                    "name": "test_task_1",
                     "quantities": {
                         "test_quantity_1": "test_objective_1",
                         "test_quantity_2": "test_objective_2"
                     },
                     "method": "test_method_1",
+                    "source": True,
+                    "request": False,
                 },
                 {
-                    "name": "test_source_2",
+                    "name": "test_task_2",
                     "quantities": {
                         "test_quantity_1": "test_objective_1",
                         "test_quantity_2": "test_objective_2"
                     },
                     "method": "test_method_2",
+                    "source": True,
+                    "request": False,
                 }
             ]
         }
         results = {
-            "test_source_1": {
+            "test_task_1": {
                 "test_quantity_1": [
                     {
                         "uuid": "test_result_id_1",
@@ -195,7 +202,7 @@ class TestData(unittest.TestCase):
                 #     }
                 # ]
             },
-            "test_source_2": {
+            "test_task_2": {
                 "test_quantity_1": [
                     {
                         "uuid": "test_result_id_5",
@@ -234,7 +241,7 @@ class TestData(unittest.TestCase):
                             "method": ["test_method_2"],
                             "parameters": {},  # left out
                             "tenant_uuid": "test_tenant_id",
-                            "request_uuid": "test_request_id_3",
+                            "request_uuid": "test_request_id_5",
                         }
                     },
                     {
@@ -274,7 +281,7 @@ class TestData(unittest.TestCase):
                             "method": ["test_method_2"],
                             "parameters": {},  # left out
                             "tenant_uuid": "test_tenant_id",
-                            "request_uuid": "test_request_id_4",
+                            "request_uuid": "test_request_id_6",
                         }
                     }
                 ],
@@ -291,9 +298,9 @@ class TestData(unittest.TestCase):
         # pd.set_option('display.max_columns', None)
         # assert False, f"\n{str(df)}"
 
-    def test_get_constraints_from_method_limitations(self):
-        limitations = [
-            {
+    def test_get_constraints_from_limitations(self):
+        limitations = {
+            "test_task": {
                 "quantity": "test_quantity",
                 "method": "test_method",
                 "limitations": [
@@ -316,14 +323,14 @@ class TestData(unittest.TestCase):
                     }
                 ]
             }
-        ]
-        constraints = data.get_constraints_from_method_limitations(limitations)
-        self.assertIn("test_method", constraints)
-        self.assertEqual(len(constraints["test_method"]), 1)
-        self.assertEqual(constraints["test_method"][0]["method"], "test_method")
-        self.assertEqual(constraints["test_method"][0]["quantity"], "test_quantity")
-        self.assertIn("formulation", constraints["test_method"][0])
-        formula_constraints = constraints["test_method"][0]["formulation"]
+        }
+        constraints = data.get_constraints_from_limitations(limitations)
+        self.assertIn("test_task", constraints)
+        self.assertEqual(len(constraints["test_task"]), 1)
+        self.assertEqual(constraints["test_task"][0]["method"], "test_method")
+        self.assertEqual(constraints["test_task"][0]["quantity"], "test_quantity")
+        self.assertIn("formulation", constraints["test_task"][0])
+        formula_constraints = constraints["test_task"][0]["formulation"]
         self.assertIn("chemicals", formula_constraints)
         self.assertIn("lower", formula_constraints)
         self.assertIn("upper", formula_constraints)
@@ -333,7 +340,7 @@ class TestData(unittest.TestCase):
         for lower, upper in zip(formula_constraints["lower"], formula_constraints["upper"]):
             self.assertGreater(upper, lower)
 
-    def test_get_constraints_from_formulation(self):
+    def test_get_constraints_from_formulation_limitations(self):
         formulation = [
             {
                 "chemical": {"SMILES": "test_smiles_1", "InChIKey": "test_inchi_1"},
@@ -348,7 +355,7 @@ class TestData(unittest.TestCase):
                 "fraction_type": "molPerMol"
             },
         ]
-        formula_constraints = data.get_constraints_from_formulation(formulation)
+        formula_constraints = data.get_constraints_from_formulation_limitations(formulation)
         self.assertIn("chemicals", formula_constraints)
         self.assertIn("lower", formula_constraints)
         self.assertIn("upper", formula_constraints)
@@ -358,57 +365,57 @@ class TestData(unittest.TestCase):
         for lower, upper in zip(formula_constraints["lower"], formula_constraints["upper"]):
             self.assertGreater(upper, lower)
 
-    def test_get_constraints_from_fraction(self):
+    def test_get_constraints_from_fraction_limitations(self):
         fraction = [{"min": 0.0, "max": 1.0}]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 1.0)
         self.assertEqual(tolerance, 0.0)
 
         fraction = [{"min": 0.1, "max": 0.9}]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.1)
         self.assertEqual(upper, 0.9)
         self.assertEqual(tolerance, 0.0)
 
         fraction = [{"min": 0.0, "max": 0.0}, {"min": 0.0, "max": 1.0}]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 1.0)
         self.assertEqual(tolerance, 0.0)
 
         fraction = [{"min": 0.0, "max": 0.0}, {"min": 0.1, "max": 0.9}]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 0.9)
         self.assertEqual(tolerance, 0.1)
 
         fraction = [{"min": 0.0, "max": 1.0}, {"min": 0.0, "max": 0.0}]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 1.0)
         self.assertEqual(tolerance, 0.0)
 
         fraction = [{"min": 0.1, "max": 0.9}, {"min": 0.0, "max": 0.0}]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 0.9)
         self.assertEqual(tolerance, 0.1)
 
         fraction = [0.0, {"min": 0.1, "max": 0.9}]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 0.9)
         self.assertEqual(tolerance, 0.1)
 
         fraction = [{"min": 0.0, "max": 1.0}, 0.0]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 1.0)
         self.assertEqual(tolerance, 0.0)
 
         fraction = [{"min": 0.1, "max": 0.9}, 0.0]
-        lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
+        lower, upper, tolerance = data.get_constraints_from_fraction_limitations(fraction)
         self.assertEqual(lower, 0.0)
         self.assertEqual(upper, 0.9)
         self.assertEqual(tolerance, 0.1)
@@ -429,7 +436,7 @@ class TestData(unittest.TestCase):
         # fraction = [{"min": 0.1, "max": 0.7}, {"min": 0.3, "max": 0.9}]
         # lower, upper, tolerance = data.get_constraints_from_fraction(fraction)
 
-    def test_get_candidates_from_method_constraints(self):
+    def test_get_candidates_from_constraints(self):
         constraints = [
             {
                 "quantity": "test_quantity",
@@ -468,16 +475,19 @@ class TestData(unittest.TestCase):
 
     def test_get_best_candidates(self):
         config = {
-            "name": "test_optimiser",
-            "targets": [{
-                "name": "test_target",
-                "quantities": {"test_quantity": "test_quantity"},
+            "name": "otest",
+            "objectives": [],
+            "tasks": [{
+                "name": "test_task",
+                "quantities": {"test_quantity": "test_objective"},
                 "method": "test_method",
-                "defaults": {"temperature": 300},
-                "max_queue_size": 1,
+                "source": True,
+                "request": True,
+                "parameters": {"temperature": 300},
+                "max_queue_size": 1
             }]
         }
-        constraints = {"test_method": [
+        constraints = {"test_task": [
             {
                 "quantity": "test_quantity",
                 "method": "test_method",
@@ -505,21 +515,24 @@ class TestData(unittest.TestCase):
                 }
             }
         ]}
-        df = None  # TODO: Add dataframe of observed data for data based approach
+        df = pd.DataFrame()  # TODO: Add dataframe of observed data for data based approach
         candidates = data.get_best_candidates(config, df, constraints)
         self.assertEqual(len(candidates), 1)
         candidate = candidates[0]
-        self.assertEqual(candidate["target"]["name"], "test_target")
+        self.assertEqual(candidate["task"]["name"], "test_task")
 
     def test_get_requests_from_candidate(self):
         config = {
-            "name": "opt",
-            "targets": [{
-                "name": "test_target",
-                "quantities": {"test_quantity": "test_quantity"},
+            "name": "otest",
+            "objectives": [],
+            "tasks": [{
+                "name": "test_task",
+                "quantities": {"test_quantity": "test_objective"},
                 "method": "test_method",
-                "defaults": {"temperature": 300},
-                "max_queue_size": 1,
+                "source": True,
+                "request": True,
+                "parameters": {"temperature": 300},
+                "max_queue_size": 1
             }]
         }
         chemicals = [
@@ -527,7 +540,7 @@ class TestData(unittest.TestCase):
             {"SMILES": "test_smiles_2", "InChIKey": "test_inchi_2"},
         ]
         candidate = {
-            "target": config["targets"][0],
+            "task": config["tasks"][0],
             "chemicals": chemicals,
             "fractions": [0.5, 0.5],
         }
@@ -537,17 +550,20 @@ class TestData(unittest.TestCase):
 
     def test_integration(self):
         config = {
-            "name": "test_optimiser",
-            "targets": [{
-                "name": "test_target",
-                "quantities": {"test_quantity": "test_quantity"},
+            "name": "otest",
+            "objectives": [],
+            "tasks": [{
+                "name": "test_task",
+                "quantities": {"test_quantity": "test_objective"},
                 "method": "test_method",
-                "defaults": {"temperature": 300},
-                "max_queue_size": 1,
+                "source": True,
+                "request": True,
+                "parameters": {"temperature": 300},
+                "max_queue_size": 1
             }]
         }
-        limitations = [
-            {
+        limitations = {
+            "test_task": {
                 "quantity": "test_quantity",
                 "method": "test_method",
                 "limitations": [
@@ -570,40 +586,48 @@ class TestData(unittest.TestCase):
                     }
                 ]
             }
-        ]
-        constraints = data.get_constraints_from_method_limitations(limitations)
-        self.assertIn("test_method", constraints)
-        self.assertEqual(len(constraints["test_method"]), 1)
-        df = None  # TODO: Add dataframe of observed data for data based approach
+        }
+        constraints = data.get_constraints_from_limitations(limitations)
+        self.assertIn("test_task", constraints)
+        self.assertEqual(len(constraints["test_task"]), 1)
+        df = pd.DataFrame()  # TODO: Add dataframe of observed data for data based approach
         candidates = data.get_best_candidates(config, df, constraints)
         self.assertEqual(len(candidates), 1)
         candidate = candidates[0]
-        self.assertEqual(candidate["target"]["name"], "test_target")
+        self.assertEqual(candidate["task"]["name"], "test_task")
         requests = data.get_requests_from_candidate(config, candidate)
         self.assertEqual(len(requests), 1)
         schemas.Request(**requests[0])  # Validate request with schema
 
     def test_integration_with_mock_broker(self):
         config = {
-            "name": "mock_optimiser",
-            "targets": [{
-                "name": "mock_target",
-                "quantities": {"mock_quantity": "mock_quantity"},
+            "name": "omock",
+            "objectives": [],
+            "tasks": [{
+                "name": "mock_task",
+                "quantities": {"mock_quantity": "mock_objective"},
                 "method": "mock_method",
-                "defaults": {"temperature": 300},
-                "max_queue_size": 1,
+                "source": True,
+                "request": True,
+                "parameters": {"temperature": 300},
+                "max_queue_size": 1
             }]
         }
         broker = MockBroker(authenticated=True, compute_results=False)
-        limitations = broker.get_limitations()
-        constraints = data.get_constraints_from_method_limitations(limitations)
-        self.assertIn("mock_method", constraints)
-        self.assertEqual(len(constraints["mock_method"]), 1)
-        df = None  # TODO: Add dataframe of observed data for data based approach
+        raw_limitations = broker.get_limitations()
+        self.assertEqual(len(raw_limitations), 1)
+        self.assertEqual(len(raw_limitations[0]["limitations"]), 1)
+        self.assertEqual(raw_limitations[0]["quantity"], "mock_quantity")
+        self.assertEqual(raw_limitations[0]["method"], "mock_method")
+        limitations = {config["tasks"][0]["name"]: raw_limitations[0]}
+        constraints = data.get_constraints_from_limitations(limitations)
+        self.assertIn("mock_task", constraints)
+        self.assertEqual(len(constraints["mock_task"]), 1)
+        df = pd.DataFrame()  # TODO: Add dataframe of observed data for data based approach
         candidates = data.get_best_candidates(config, df, constraints)
         self.assertEqual(len(candidates), 1)
         candidate = candidates[0]
-        self.assertEqual(candidate["target"]["name"], "mock_target")
+        self.assertEqual(candidate["task"]["name"], "mock_task")
         requests = data.get_requests_from_candidate(config, candidate)
         self.assertEqual(len(requests), 1)
         schemas.Request(**requests[0])  # Validate request with schema
