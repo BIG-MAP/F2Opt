@@ -1,0 +1,21 @@
+{
+    "name": "omock",
+    "id": "omock_id",
+    "objectives": [
+        {
+            "quantity": "mock_objective",
+            "goal": "max"
+        }
+    ],
+    "tasks": [
+        {
+            "name": "mock_task",
+            "quantities": {"mock_quantity": "mock_objective"},
+            "method": "mock_method",
+            "source": true,
+            "request": true,
+            "parameters": {"temperature": 300},
+            "max_queue_size": 99
+        }
+    ]
+}

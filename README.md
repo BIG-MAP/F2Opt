@@ -11,7 +11,7 @@ Optimizer applications for the FINALES2 materials acceleration platform (MAP).
 * Data is sourced from experiment and simulation.
 * The surrogate model is a multi-source single-objective Gaussian process regression model.
 
-Run `$ python src/ocond.py --help` to see required arguments.
+Run `$ python -m src.ocond --help` to see required arguments.
 
 
 ## Requirements

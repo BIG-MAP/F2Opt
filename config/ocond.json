@@ -1,0 +1,21 @@
+{
+    "name": "ocond",
+    "id": "ocond_id",
+    "objectives": [
+        {
+            "quantity": "cond",
+            "goal": "max"
+        }
+    ],
+    "tasks": [
+        {
+            "name": "ASAB",
+            "quantities": {"conductivity": "cond"},
+            "method": "two_electrode",
+            "source": true,
+            "request": true,
+            "parameters": {"temperature": 300},
+            "max_queue_size": 1
+        }
+    ]
+}
