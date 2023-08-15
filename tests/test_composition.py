@@ -161,6 +161,23 @@ class TestCompositionSampling(unittest.TestCase):
         self.assertTrue((x.sum(dim=1) == 1).all())
         self.assertTrue((x.min(0)[0] < 0.05).all())
 
+    def test_sample_compositions_single(self):
+        """Test compositions with single feature."""
+        num_features, num_samples = 1, 10
+        x = composition.sample_compositions(num_features, num_samples)
+        self.assertEqual(x.shape, (num_samples, num_features))
+        self.assertTrue((x == 1.0).all())
+
+    def test_sample_compositions_with_constraints_single(self):
+        """Test compositions with single feature."""
+        num_features, num_samples = 1, 10
+        lower = torch.tensor([0.1])
+        upper = torch.tensor([1.0])
+        tolerance = torch.tensor([0.01])
+        x = composition.sample_compositions_with_constraints(lower, upper, tolerance, num_samples)
+        self.assertEqual(x.shape, (num_samples, num_features))
+        self.assertTrue((x == 1.0).all())
+
     def test_sample_compositions_with_constraints_negative(self):
         """Test compositions are not sampled outside the given constraints."""
         num_features, num_samples = 10, 1000

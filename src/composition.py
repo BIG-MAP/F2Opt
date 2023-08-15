@@ -128,6 +128,9 @@ def sample_compositions(num_features: int, num_samples: int = 1) -> torch.Tensor
     Returns:
         Tensor of sampled compositions (num_samples, num_features).
     """
+    if num_features == 1:
+        # If there is only one feature, the only possible composition is 1.0.
+        return torch.ones(num_samples, 1)
     x = torch.rand(num_samples, num_features + 1)
     x[:, 0] = 0
     x[:, -1] = 1
@@ -159,6 +162,11 @@ def sample_compositions_with_constraints(
     """
     num_features = len(lower)
     lower, upper, tolerance = torch.tensor(lower), torch.tensor(upper), torch.tensor(tolerance)
+    if num_features == 1:
+        # If there is only one feature, the only possible composition is 1.0.
+        assert len(lower) == len(upper) == len(tolerance) == 1
+        assert upper.item() == 1.0
+        return torch.ones(num_samples, 1)
     assert num_features >= 2, "At least two features are required."
     assert len(lower) == len(upper) == len(tolerance), \
         "Constraints must all have length (num_features,)."
