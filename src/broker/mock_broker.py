@@ -32,7 +32,7 @@ class MockBroker:
             {
                 "quantity": "mock_quantity",
                 "method": "mock_method",
-                "limitations": [
+                "limitations": {"anyOf": [
                     {
                         "formulation": [[
                             {
@@ -48,7 +48,7 @@ class MockBroker:
                         ]],
                         "temperature": [{"min": 243, "max": 333}]
                     }
-                ]
+                ]}
             }
         ]
         if compute_results:
@@ -198,7 +198,7 @@ class MockBroker:
                             "temperature": 300
                         }
                     },
-                    "tenant_uuid": "mock_tenant_id",
+                    "tenant_uuid": "mock_requester_id",
                     "uuid": "mock_request_id_3"
                 }
             ]

@@ -5,8 +5,6 @@
 - Use schemas to validate data formats.
 """
 
-from datetime import datetime
-
 import pandas as pd
 
 from . import schemas
@@ -39,8 +37,9 @@ def get_constraints_list_from_task_limitations(task):
         List of task constraints dicts.
     """
     # Extract limitation
-    assert len(task["limitations"]) == 1
-    limitations = task["limitations"][0]
+    # TODO: The anyOf key should be removed from the schema in the future
+    assert len(task["limitations"]["anyOf"]) == 1
+    limitations = task["limitations"]["anyOf"][0]
     # Extract constraints for each formulation limitations
     constraints_list = []
     for formulation in limitations["formulation"]:
@@ -150,7 +149,7 @@ def get_dataframe_from_results(config, results):
                 rows = [get_row_from_result(result) for result in results_list]
                 quantity_df = pd.DataFrame(rows)
                 quantity_df["task"] = task["name"]
-                # TODO: Rename columns: quantity to objective?
+                # TODO: Rename columns: quantity to objective (from task config)?
                 quantity_dfs.append(quantity_df)
         if len(quantity_dfs) == 0:
             continue
@@ -302,15 +301,16 @@ def get_requests_from_candidate(config, candidate):
         "temperature": task["parameters"]["temperature"],
     }
     # In mult-objective optimisation, create a request for each quantity
-    # Use a common identifier for the requests so they can be matched
-    identifier = f"{config['name']}_{datetime.now().isoformat()}"
+    # TODO: Add common reference to the requests, not yet implemented in the API
+    # Use a common reference for the requests so they can be matched
+    # reference = f"{config['name']}_{datetime.now().isoformat()}"
     requests = []
     for quantity in task["quantities"].keys():
         request = {
             "quantity": quantity,
             "methods": [task["method"]],
             "parameters": {task["method"]: parameters},
-            "tenant_uuid": identifier,
+            "tenant_uuid": config["id"],
         }
         schemas.Request(**request)  # Validate request with schema
         requests.append(request)

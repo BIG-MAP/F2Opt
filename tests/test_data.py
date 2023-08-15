@@ -11,6 +11,7 @@ class TestData(unittest.TestCase):
     def test_get_dataframe_from_results(self):
         config = {
             "name": "otest",
+            "id": "test_id",
             "objectives": [],
             "tasks": [
                 {
@@ -303,7 +304,7 @@ class TestData(unittest.TestCase):
             "test_task": {
                 "quantity": "test_quantity",
                 "method": "test_method",
-                "limitations": [
+                "limitations": {"anyOf": [
                     {
                         "formulation": [[
                             {
@@ -321,7 +322,7 @@ class TestData(unittest.TestCase):
                         ]],
                         "temperature": [{"min": 243, "max": 333}]
                     }
-                ]
+                ]}
             }
         }
         constraints = data.get_constraints_from_limitations(limitations)
@@ -476,6 +477,7 @@ class TestData(unittest.TestCase):
     def test_get_best_candidates(self):
         config = {
             "name": "otest",
+            "id": "test_id",
             "objectives": [],
             "tasks": [{
                 "name": "test_task",
@@ -524,6 +526,7 @@ class TestData(unittest.TestCase):
     def test_get_requests_from_candidate(self):
         config = {
             "name": "otest",
+            "id": "test_id",
             "objectives": [],
             "tasks": [{
                 "name": "test_task",
@@ -551,6 +554,7 @@ class TestData(unittest.TestCase):
     def test_integration(self):
         config = {
             "name": "otest",
+            "id": "test_id",
             "objectives": [],
             "tasks": [{
                 "name": "test_task",
@@ -566,7 +570,7 @@ class TestData(unittest.TestCase):
             "test_task": {
                 "quantity": "test_quantity",
                 "method": "test_method",
-                "limitations": [
+                "limitations": {"anyOf": [
                     {
                         "formulation": [[
                             {
@@ -584,7 +588,7 @@ class TestData(unittest.TestCase):
                         ]],
                         "temperature": [{"min": 243, "max": 333}]
                     }
-                ]
+                ]}
             }
         }
         constraints = data.get_constraints_from_limitations(limitations)
@@ -602,6 +606,7 @@ class TestData(unittest.TestCase):
     def test_integration_with_mock_broker(self):
         config = {
             "name": "omock",
+            "id": "mock_id",
             "objectives": [],
             "tasks": [{
                 "name": "mock_task",
