@@ -304,7 +304,7 @@ class TestData(unittest.TestCase):
             "test_task": {
                 "quantity": "test_quantity",
                 "method": "test_method",
-                "limitations": {"anyOf": [
+                "limitations": [
                     {
                         "formulation": [[
                             {
@@ -322,7 +322,7 @@ class TestData(unittest.TestCase):
                         ]],
                         "temperature": [{"min": 243, "max": 333}]
                     }
-                ]}
+                ]
             }
         }
         constraints = data.get_constraints_from_limitations(limitations)
@@ -570,7 +570,7 @@ class TestData(unittest.TestCase):
             "test_task": {
                 "quantity": "test_quantity",
                 "method": "test_method",
-                "limitations": {"anyOf": [
+                "limitations": [
                     {
                         "formulation": [[
                             {
@@ -588,7 +588,7 @@ class TestData(unittest.TestCase):
                         ]],
                         "temperature": [{"min": 243, "max": 333}]
                     }
-                ]}
+                ]
             }
         }
         constraints = data.get_constraints_from_limitations(limitations)

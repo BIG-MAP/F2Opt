@@ -37,9 +37,8 @@ def get_constraints_list_from_task_limitations(task):
         List of task constraints dicts.
     """
     # Extract limitation
-    # TODO: The anyOf key should be removed from the schema in the future
-    assert len(task["limitations"]["anyOf"]) == 1
-    limitations = task["limitations"]["anyOf"][0]
+    assert len(task["limitations"]) == 1
+    limitations = task["limitations"][0]
     # Extract constraints for each formulation limitations
     constraints_list = []
     for formulation in limitations["formulation"]:
@@ -232,6 +231,7 @@ def get_candidates_from_constraints(constraints_list, num_samples=1):
         dfs.append(pd.DataFrame(compositions, columns=columns))
     # Stack candidate samples and fill missing values with zeros
     candidates_df = pd.concat(dfs, axis=0, ignore_index=True).fillna(0)
+    # TODO: Drop duplicate candidates to save computation
     return candidates_df
 
 

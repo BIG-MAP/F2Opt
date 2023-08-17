@@ -32,7 +32,7 @@ class MockBroker:
             {
                 "quantity": "mock_quantity",
                 "method": "mock_method",
-                "limitations": {"anyOf": [
+                "limitations": [
                     {
                         "formulation": [[
                             {
@@ -48,7 +48,7 @@ class MockBroker:
                         ]],
                         "temperature": [{"min": 243, "max": 333}]
                     }
-                ]}
+                ]
             }
         ]
         if compute_results:
