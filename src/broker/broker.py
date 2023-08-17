@@ -1,5 +1,9 @@
+"""Broker client."""
+
 import logging
 import requests
+
+import jsonschema
 
 
 logger = logging.getLogger("broker")
@@ -105,6 +109,7 @@ class Broker:
 
     def post_result(self, result):
         """Post result."""
+        # TODO: Not used and not tested
         assert self.auth_header is not None, "Not authenticated."
         # TODO: validate result
         if self.shadow_mode:
@@ -155,10 +160,36 @@ class Broker:
             logger.warning(f"Get request: {res.status_code}, {res.reason}")
             return None
 
+    def validate_request(self, request):
+        """Validate request with json schema."""
+        assert self.auth_header is not None, "Not authenticated."
+        logger.info("Validate request")
+        # Get the json schema from the matching capability
+        assert len(request["methods"]) == 1
+        quantity, method = request["quantity"], request["methods"][0]
+        capabilities = self.get_capabilities()
+        for capability in capabilities:
+            if capability["quantity"] == quantity and capability["method"] == method:
+                break  # match found
+        else:
+            logger.warning(f"No capability found for validation: {quantity}, {method}")
+            return False
+        # Validate request with json schema
+        schema = capability["json_schema_specifications"]
+        try:
+            jsonschema.validate(request["parameters"][method], schema)
+        except jsonschema.exceptions.ValidationError as e:
+            logger.warning(f"Request validation error: {e}")
+            return False
+        logger.info("Request validation success")
+        return True
+
     def post_request(self, request):
         """Post request."""
         assert self.auth_header is not None, "Not authenticated."
-        # TODO: validate request
+        # Validate request (will log warning if validation fails)
+        self.validate_request(request)
+        # Post request
         if self.shadow_mode:
             logger.info("Post request: shadow mode")
             return "request_shadow_id"
