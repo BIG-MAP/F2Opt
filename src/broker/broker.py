@@ -88,6 +88,21 @@ class Broker:
             logger.warning(f"Get results: {res.status_code}, {res.reason}")
             return []
 
+    def get_result(self, result_id):
+        """Get a result by id."""
+        assert self.auth_header is not None, "Not authenticated."
+        res = requests.get(
+            self.url + f"/results/{result_id}",
+            headers=self.auth_header,
+        )
+        if res.ok:
+            logger.info(f"Get result: {res.status_code}, {res.reason}")
+            result = res.json()
+            return result
+        else:
+            logger.warning(f"Get result: {res.status_code}, {res.reason}")
+            return None
+
     def post_result(self, result):
         """Post result."""
         assert self.auth_header is not None, "Not authenticated."
@@ -124,6 +139,21 @@ class Broker:
         else:
             logger.warning(f"Get pending requests: {res.status_code}, {res.reason}")
             return []
+
+    def get_request(self, request_id):
+        """Get a request by id."""
+        assert self.auth_header is not None, "Not authenticated."
+        res = requests.get(
+            self.url + f"/requests/{request_id}",
+            headers=self.auth_header,
+        )
+        if res.ok:
+            logger.info(f"Get request: {res.status_code}, {res.reason}")
+            request = res.json()
+            return request
+        else:
+            logger.warning(f"Get request: {res.status_code}, {res.reason}")
+            return None
 
     def post_request(self, request):
         """Post request."""

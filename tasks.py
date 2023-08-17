@@ -65,6 +65,14 @@ def get_results(c, quantity=None, method=None):
 
 
 @task
+def get_result(c, result_id):
+    broker = get_broker()
+    broker.authenticate()
+    result = broker.get_result(result_id)
+    print(json.dumps(result, indent=2))
+
+
+@task
 def post_result(c, request_id):
     broker = get_broker()
     broker.authenticate()
@@ -92,6 +100,14 @@ def get_pending_requests(c, quantity=None, method=None):
     broker.authenticate()
     requests = broker.get_pending_requests(quantity=quantity, method=method)
     print(json.dumps(requests, indent=2))
+
+
+@task
+def get_request(c, request_id):
+    broker = get_broker()
+    broker.authenticate()
+    request = broker.get_request(request_id)
+    print(json.dumps(request, indent=2))
 
 
 @task
