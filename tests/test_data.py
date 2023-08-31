@@ -68,7 +68,7 @@ class TestData(unittest.TestCase):
                                 },
                                 "test_quantity_1": {
                                     "values": [0.09],
-                                    "temperature": 300,
+                                    "temperature": 298,
                                     "meta": {"success": True, "rating": 1}
                                 }
                             },
@@ -108,7 +108,7 @@ class TestData(unittest.TestCase):
                                 },
                                 "test_quantity_1": {
                                     "values": [0.16],
-                                    "temperature": 300,
+                                    "temperature": 298,
                                     "meta": {"success": True, "rating": 1}
                                 }
                             },
@@ -150,7 +150,7 @@ class TestData(unittest.TestCase):
                 #                 },
                 #                 "test_quantity_2": {
                 #                     "values": [0.09],
-                #                     "temperature": 300,
+                #                     "temperature": 298,
                 #                     "meta": {"success": True, "rating": 1}
                 #                 }
                 #             },
@@ -190,7 +190,7 @@ class TestData(unittest.TestCase):
                 #                 },
                 #                 "test_quantity_2": {
                 #                     "values": [0.16],
-                #                     "temperature": 300,
+                #                     "temperature": 298,
                 #                     "meta": {"success": True, "rating": 1}
                 #                 }
                 #             },
@@ -234,7 +234,7 @@ class TestData(unittest.TestCase):
                                 },
                                 "test_quantity_1": {
                                     "values": [0.09],
-                                    "temperature": 300,
+                                    "temperature": 298,
                                     "meta": {"success": True, "rating": 1}
                                 }
                             },
@@ -274,7 +274,7 @@ class TestData(unittest.TestCase):
                                 },
                                 "test_quantity_1": {
                                     "values": [0.16],
-                                    "temperature": 300,
+                                    "temperature": 298,
                                     "meta": {"success": True, "rating": 1}
                                 }
                             },
@@ -485,7 +485,7 @@ class TestData(unittest.TestCase):
                 "method": "test_method",
                 "source": True,
                 "request": True,
-                "parameters": {"temperature": 300},
+                "parameters": {},
                 "max_queue_size": 1
             }]
         }
@@ -534,7 +534,7 @@ class TestData(unittest.TestCase):
                 "method": "test_method",
                 "source": True,
                 "request": True,
-                "parameters": {"temperature": 300},
+                "parameters": {},
                 "max_queue_size": 1
             }]
         }
@@ -562,7 +562,7 @@ class TestData(unittest.TestCase):
                 "method": "test_method",
                 "source": True,
                 "request": True,
-                "parameters": {"temperature": 300},
+                "parameters": {},
                 "max_queue_size": 1
             }]
         }
@@ -614,7 +614,7 @@ class TestData(unittest.TestCase):
                 "method": "mock_method",
                 "source": True,
                 "request": True,
-                "parameters": {"temperature": 300},
+                "parameters": {},
                 "max_queue_size": 1
             }]
         }

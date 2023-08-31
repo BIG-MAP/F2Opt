@@ -83,7 +83,7 @@ class MockBroker:
                             },
                             "mock_quantity": {
                                 "values": [0.09],
-                                "temperature": 300,
+                                "temperature": 298,
                                 "meta": {"success": True, "rating": 1}
                             }
                         },
@@ -107,7 +107,7 @@ class MockBroker:
                                         "fraction_type": "molPerMol"
                                     }
                                 ],
-                                "temperature": 300
+                                "temperature": 298
                             }
                         },
                         "tenant_uuid": "mock_tenant_id",
@@ -141,7 +141,7 @@ class MockBroker:
                             },
                             "mock_quantity": {
                                 "values": [0.16],
-                                "temperature": 300,
+                                "temperature": 298,
                                 "meta": {"success": True, "rating": 1}
                             }
                         },
@@ -165,7 +165,7 @@ class MockBroker:
                                         "fraction_type": "molPerMol"
                                     }
                                 ],
-                                "temperature": 300
+                                "temperature": 298
                             }
                         },
                         "tenant_uuid": "mock_tenant_id",
@@ -195,7 +195,6 @@ class MockBroker:
                                     "fraction_type": "molPerMol"
                                 },
                             ],
-                            "temperature": 300
                         }
                     },
                     "tenant_uuid": "mock_requester_id",
@@ -295,7 +294,7 @@ class MockBroker:
                     },
                     "mock_quantity": {
                         "values": [result_value],
-                        "temperature": request["parameters"]["mock_method"]["temperature"],
+                        "temperature": 298,
                         "meta": {"success": True, "rating": 1}
                     }
                 },
@@ -304,7 +303,7 @@ class MockBroker:
                 "parameters": {
                     "mock_method": {
                         "formulation": request["parameters"]["mock_method"]["formulation"],
-                        "temperature": request["parameters"]["mock_method"]["temperature"]
+                        "temperature": 298
                     }
                 },
                 "tenant_uuid": "mock_tenant_id",

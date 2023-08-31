@@ -1,6 +1,6 @@
 {
     "name": "ocond",
-    "id": "ocond_id",
+    "id": "00000000-0000-0000-0000-000000000000",
     "objectives": [
         {
             "quantity": "cond",
@@ -14,7 +14,7 @@
             "method": "two_electrode",
             "source": true,
             "request": true,
-            "parameters": {"temperature": 300},
+            "parameters": {},
             "max_queue_size": 1
         }
     ]

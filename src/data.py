@@ -298,7 +298,6 @@ def get_requests_from_candidate(config, candidate):
         formulation.append(formulation_component)
     parameters = {
         "formulation": formulation,
-        "temperature": task["parameters"]["temperature"],
     }
     # In mult-objective optimisation, create a request for each quantity
     # TODO: Add common reference to the requests, not yet implemented in the API
