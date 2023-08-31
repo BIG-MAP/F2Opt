@@ -1,23 +1,22 @@
 # F2Opt
 
-Optimizer applications for the FINALES2 materials acceleration platform (MAP).
+Optimiser application for the FINALES2 materials acceleration platform (MAP).
 
 
-## Optimizers
+## Optimiser
 
-### src/ocond.py
+The main functionality of the optimiser code is implemented in `src/main.py`.
 
-* Optimise conductivity as a function of electrolyte formulation.
-* Data is sourced from experiment and simulation.
-* The surrogate model is a multi-source single-objective Gaussian process regression model.
+Run `$ python -m src.main --help` to see the required arguments.
 
-Run `$ python -m src.ocond --help` to see required arguments.
+A configuration file is required to run the optimiser.
+See `config/ocond.json` as an example.
 
 
 ## Requirements
 
-Developed with Python 3.10.10.
-Requirements are specified in `requirements.txt`.
+The code is developed with Python 3.10.10.
+The required Python packages are specified in `requirements.txt`.
 
 
 ## Tests
