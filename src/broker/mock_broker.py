@@ -45,6 +45,11 @@ class MockBroker:
                                 "fraction": [{"min": 0.0, "max": 1.0}, 0.0],
                                 "fraction_type": "molPerMol"
                             },
+                            {
+                                "chemical": {"SMILES": "mock_smiles_3", "InChIKey": "mock_inchi_3"},
+                                "fraction": [{"min": 0.0, "max": 1.0}, 0.0],
+                                "fraction_type": "molPerMol"
+                            },
                         ]],
                         "temperature": [{"min": 243, "max": 333}]
                     }
@@ -75,14 +80,21 @@ class MockBroker:
                                         "chemical": {
                                             "SMILES": "mock_smiles_2", "InChIKey": "mock_inchi_2"
                                         },
-                                        "fraction": 0.9,
+                                        "fraction": 0.1,
                                         "fraction_type": "molPerMol"
-                                    }
+                                    },
+                                    {
+                                        "chemical": {
+                                            "SMILES": "mock_smiles_3", "InChIKey": "mock_inchi_3"
+                                        },
+                                        "fraction": 0.8,
+                                        "fraction_type": "molPerMol"
+                                    },
                                 ],
                                 "internal_reference": "mock_internal_reference_1"
                             },
                             "mock_quantity": {
-                                "values": [0.09],
+                                "values": [0.008],
                                 "temperature": 298,
                                 "meta": {"success": True, "rating": 1}
                             }
@@ -103,9 +115,16 @@ class MockBroker:
                                         "chemical": {
                                             "SMILES": "mock_smiles_2", "InChIKey": "mock_inchi_2"
                                         },
-                                        "fraction": 0.9,
+                                        "fraction": 0.1,
                                         "fraction_type": "molPerMol"
-                                    }
+                                    },
+                                    {
+                                        "chemical": {
+                                            "SMILES": "mock_smiles_3", "InChIKey": "mock_inchi_3"
+                                        },
+                                        "fraction": 0.8,
+                                        "fraction_type": "molPerMol"
+                                    },
                                 ],
                                 "temperature": 298
                             }
@@ -126,21 +145,28 @@ class MockBroker:
                                         "chemical": {
                                             "SMILES": "mock_smiles_1", "InChIKey": "mock_inchi_1"
                                         },
-                                        "fraction": 0.2,
+                                        "fraction": 0.1,
                                         "fraction_type": "molPerMol"
                                     },
                                     {
                                         "chemical": {
                                             "SMILES": "mock_smiles_2", "InChIKey": "mock_inchi_2"
                                         },
-                                        "fraction": 0.8,
+                                        "fraction": 0.2,
                                         "fraction_type": "molPerMol"
-                                    }
+                                    },
+                                    {
+                                        "chemical": {
+                                            "SMILES": "mock_smiles_3", "InChIKey": "mock_inchi_3"
+                                        },
+                                        "fraction": 0.7,
+                                        "fraction_type": "molPerMol"
+                                    },
                                 ],
                                 "internal_reference": "mock_internal_reference_1"
                             },
                             "mock_quantity": {
-                                "values": [0.16],
+                                "values": [0.014],
                                 "temperature": 298,
                                 "meta": {"success": True, "rating": 1}
                             }
@@ -154,16 +180,23 @@ class MockBroker:
                                         "chemical": {
                                             "SMILES": "mock_smiles_1", "InChIKey": "mock_inchi_1"
                                         },
-                                        "fraction": 0.2,
+                                        "fraction": 0.1,
                                         "fraction_type": "molPerMol"
                                     },
                                     {
                                         "chemical": {
                                             "SMILES": "mock_smiles_2", "InChIKey": "mock_inchi_2"
                                         },
-                                        "fraction": 0.8,
+                                        "fraction": 0.2,
                                         "fraction_type": "molPerMol"
-                                    }
+                                    },
+                                    {
+                                        "chemical": {
+                                            "SMILES": "mock_smiles_3", "InChIKey": "mock_inchi_3"
+                                        },
+                                        "fraction": 0.7,
+                                        "fraction_type": "molPerMol"
+                                    },
                                 ],
                                 "temperature": 298
                             }
@@ -184,14 +217,21 @@ class MockBroker:
                                     "chemical": {
                                         "SMILES": "mock_smiles_1", "InChIKey": "mock_inchi_1"
                                     },
-                                    "fraction": 0.1,
+                                    "fraction": 0.2,
                                     "fraction_type": "molPerMol"
                                 },
                                 {
                                     "chemical": {
                                         "SMILES": "mock_smiles_2", "InChIKey": "mock_inchi_2"
                                     },
-                                    "fraction": 0.9,
+                                    "fraction": 0.3,
+                                    "fraction_type": "molPerMol"
+                                },
+                                {
+                                    "chemical": {
+                                        "SMILES": "mock_smiles_3", "InChIKey": "mock_inchi_3"
+                                    },
+                                    "fraction": 0.6,
                                     "fraction_type": "molPerMol"
                                 },
                             ],

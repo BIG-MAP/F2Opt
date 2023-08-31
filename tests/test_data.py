@@ -607,7 +607,10 @@ class TestData(unittest.TestCase):
         config = {
             "name": "omock",
             "id": "mock_id",
-            "objectives": [],
+            "objectives": [{
+                "quantity": "mock_objective",
+                "goal": "max"
+            }],
             "tasks": [{
                 "name": "mock_task",
                 "quantities": {"mock_quantity": "mock_objective"},
@@ -628,7 +631,10 @@ class TestData(unittest.TestCase):
         constraints = data.get_constraints_from_limitations(limitations)
         self.assertIn("mock_task", constraints)
         self.assertEqual(len(constraints["mock_task"]), 1)
-        df = pd.DataFrame()  # TODO: Add dataframe of observed data for data based approach
+        results = broker.get_results(quantity="mock_quantity", method="mock_method")
+        results = {"mock_task": {"mock_quantity": results}}
+        df = data.get_dataframe_from_results(config, results)
+        self.assertFalse(df.empty)
         candidates = data.get_best_candidates(config, df, constraints)
         self.assertEqual(len(candidates), 1)
         candidate = candidates[0]
