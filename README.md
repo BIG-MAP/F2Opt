@@ -1,15 +1,15 @@
 # F2Opt
 
-Optimiser application for the FINALES2 materials acceleration platform (MAP).
+Optimizer application for the FINALES2 materials acceleration platform (MAP).
 
 
-## Optimiser
+## Optimizer
 
-The main functionality of the optimiser code is implemented in `src/main.py`.
+The main functionality of the optimizer code is implemented in `src/main.py`.
 
 Run `$ python -m src.main --help` to see the required arguments.
 
-A configuration file is required to run the optimiser.
+A configuration file is required to run the optimizer.
 See `config/ocond.json` as an example.
 
 

@@ -4,7 +4,7 @@
     "objectives": [
         {
             "quantity": "cond",
-            "goal": "max"
+            "maximize": true
         }
     ],
     "tasks": [
@@ -15,7 +15,22 @@
             "source": true,
             "request": true,
             "parameters": {},
-            "max_queue_size": 1
+            "max_queue_size": 1,
+            "num_candidates": 1000,
+            "min_data_for_ml": 1,
+            "num_training_steps": 200
+        },
+        {
+            "name": "3DS",
+            "quantities": {"conductivity": "cond"},
+            "method": "molecular_dynamics",
+            "source": true,
+            "request": true,
+            "parameters": {},
+            "max_queue_size": 1,
+            "num_candidates": 1000,
+            "min_data_for_ml": 1,
+            "num_training_steps": 200
         }
     ]
 }

@@ -3,3 +3,4 @@ pydantic
 jsonschema
 pandas
 torch
+gpytorch

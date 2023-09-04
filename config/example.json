@@ -1,0 +1,24 @@
+{
+    "name": "opt",
+    "id": "opt_id",
+    "objectives": [
+        {
+            "quantity": "y",
+            "maximize": true
+        }
+    ],
+    "tasks": [
+        {
+            "name": "task1",
+            "quantities": {"quant1": "y"},
+            "method": "method1",
+            "source": true,
+            "request": true,
+            "parameters": {"param1": 298},
+            "max_queue_size": 1,
+            "num_candidates": 100,
+            "min_data_for_ml": 1,
+            "num_training_steps": 200
+        }
+    ]
+}

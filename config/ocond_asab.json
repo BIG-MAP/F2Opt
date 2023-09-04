@@ -1,21 +1,21 @@
 {
-    "name": "omock",
+    "name": "ocond_asab",
     "id": "00000000-0000-0000-0000-000000000000",
     "objectives": [
         {
-            "quantity": "mock_objective",
+            "quantity": "cond",
             "maximize": true
         }
     ],
     "tasks": [
         {
-            "name": "mock_task",
-            "quantities": {"mock_quantity": "mock_objective"},
-            "method": "mock_method_1",
+            "name": "ASAB",
+            "quantities": {"conductivity": "cond"},
+            "method": "two_electrode",
             "source": true,
             "request": true,
             "parameters": {},
-            "max_queue_size": 99,
+            "max_queue_size": 1,
             "num_candidates": 1000,
             "min_data_for_ml": 1,
             "num_training_steps": 200

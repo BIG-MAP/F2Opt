@@ -23,7 +23,13 @@ class MockBroker:
         self.capabilities = [
             {
                 "quantity": "mock_quantity",
-                "method": "mock_method",
+                "method": "mock_method_1",
+                # "json_schema_specifications": {},  # schema left out
+                # "json_schema_result_output": {}  # schema left out
+            },
+            {
+                "quantity": "mock_quantity",
+                "method": "mock_method_2",
                 # "json_schema_specifications": {},  # schema left out
                 # "json_schema_result_output": {}  # schema left out
             }
@@ -31,7 +37,33 @@ class MockBroker:
         self.limitations = [
             {
                 "quantity": "mock_quantity",
-                "method": "mock_method",
+                "method": "mock_method_1",
+                "limitations": [
+                    {
+                        "formulation": [[
+                            {
+                                "chemical": {"SMILES": "mock_smiles_1", "InChIKey": "mock_inchi_1"},
+                                "fraction": [{"min": 0.0, "max": 1.0}, {"min": 0.0, "max": 0.0}],
+                                "fraction_type": "molPerMol"
+                            },
+                            {
+                                "chemical": {"SMILES": "mock_smiles_2", "InChIKey": "mock_inchi_2"},
+                                "fraction": [{"min": 0.0, "max": 1.0}, 0.0],
+                                "fraction_type": "molPerMol"
+                            },
+                            {
+                                "chemical": {"SMILES": "mock_smiles_3", "InChIKey": "mock_inchi_3"},
+                                "fraction": [{"min": 0.0, "max": 1.0}, 0.0],
+                                "fraction_type": "molPerMol"
+                            },
+                        ]],
+                        "temperature": [{"min": 243, "max": 333}]
+                    }
+                ]
+            },
+            {
+                "quantity": "mock_quantity",
+                "method": "mock_method_2",
                 "limitations": [
                     {
                         "formulation": [[
@@ -100,9 +132,9 @@ class MockBroker:
                             }
                         },
                         "quantity": "mock_quantity",
-                        "method": ["mock_method"],
+                        "method": ["mock_method_1"],
                         "parameters": {
-                            "mock_method": {
+                            "mock_method_1": {
                                 "formulation": [
                                     {
                                         "chemical": {
@@ -172,9 +204,9 @@ class MockBroker:
                             }
                         },
                         "quantity": "mock_quantity",
-                        "method": ["mock_method"],
+                        "method": ["mock_method_1"],
                         "parameters": {
-                            "mock_method": {
+                            "mock_method_1": {
                                 "formulation": [
                                     {
                                         "chemical": {
@@ -209,9 +241,9 @@ class MockBroker:
         self.requests = [
                 {
                     "quantity": "mock_quantity",
-                    "methods": ["mock_method"],
+                    "methods": ["mock_method_1"],
                     "parameters": {
-                        "mock_method": {
+                        "mock_method_1": {
                             "formulation": [
                                 {
                                     "chemical": {
@@ -319,8 +351,11 @@ class MockBroker:
     def _compute_result_from_request(self, request):
         """Compute result."""
         # Compute result value as product of chemical fractions
+        assert len(request["methods"]) == 1, "Only one method supported"
+        method = request["methods"][0]
+        assert method in [c["method"] for c in self.capabilities], "Method not in capabilities"
         result_value = 1.0
-        for chemical in request["parameters"]["mock_method"]["formulation"]:
+        for chemical in request["parameters"][method]["formulation"]:
             result_value *= chemical["fraction"]
         # Prepare and return result
         return {
@@ -329,7 +364,7 @@ class MockBroker:
             "result": {
                 "data": {
                     "run_info": {
-                        "formulation": request["parameters"]["mock_method"]["formulation"],
+                        "formulation": request["parameters"][method]["formulation"],
                         "internal_reference": "mock_internal_reference_1"
                     },
                     "mock_quantity": {
@@ -339,10 +374,10 @@ class MockBroker:
                     }
                 },
                 "quantity": "mock_quantity",
-                "method": ["mock_method"],
+                "method": [method],
                 "parameters": {
-                    "mock_method": {
-                        "formulation": request["parameters"]["mock_method"]["formulation"],
+                    method: {
+                        "formulation": request["parameters"][method]["formulation"],
                         "temperature": 298
                     }
                 },

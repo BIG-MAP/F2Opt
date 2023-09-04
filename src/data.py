@@ -1,7 +1,7 @@
 """Data processing.
 
-- Parse data from the broker to a format that can be used by the optimiser.
-- Prepare optimiser results in a format that can be send to the broker.
+- Parse data from the broker to a format that can be used by the optimizer.
+- Prepare optimizer results in a format that can be send to the broker.
 - Use schemas to validate data formats.
 """
 
@@ -9,6 +9,8 @@ import pandas as pd
 
 from . import schemas
 from .composition import sample_compositions_with_constraints
+from .optimizer import (MultiTaskSingleObjectiveOptimizer, RandomOptimizer,
+                        SingleTaskSingleObjectiveOptimizer)
 
 
 # Constraints
@@ -131,7 +133,7 @@ def get_dataframe_from_results(config, results):
     """Create dataframe from results.
 
     Args:
-        config (dict): Optimiser configuration.
+        config (dict): Configuration.
         results (dict): Collection of task results in dict format.
     Returns:
         Dataframe with results.
@@ -145,10 +147,14 @@ def get_dataframe_from_results(config, results):
             if len(results_list) == 0:
                 continue
             else:
+                # Create dataframe with results for the quantity
                 rows = [get_row_from_result(result) for result in results_list]
                 quantity_df = pd.DataFrame(rows)
-                quantity_df["task"] = task["name"]
-                # TODO: Rename columns: quantity to objective (from task config)?
+                quantity_df["task_name"] = task["name"]
+                # Create objective column
+                objective_name = task["quantities"][quantity]
+                quantity_df[objective_name] = quantity_df[quantity]
+                # Add dataframe to list of the current task
                 quantity_dfs.append(quantity_df)
         if len(quantity_dfs) == 0:
             continue
@@ -190,11 +196,12 @@ def get_row_from_result(result):
     for formulation_component in formulation:
         smiles = formulation_component["chemical"]["SMILES"]
         fraction = formulation_component["fraction"]
-        row[f"x.{smiles}"] = fraction
+        row[smiles] = fraction
     quantity = result["result"]["data"][result["result"]["quantity"]]
+    # TODO: Here we use the mean value. Could create one row per value.
     values = quantity["values"]
     value = sum(values) / len(values)  # Compute the mean value
-    row["y."+result["result"]["quantity"]] = value
+    row[result["result"]["quantity"]] = value
     row["temperature"] = quantity["temperature"]
     return row
 
@@ -226,30 +233,28 @@ def get_candidates_from_constraints(constraints_list, num_samples=1):
             tolerance=formulation["tolerance"],
             num_samples=num_samples,
         )
-        # TODO: Perhaps the columns should be 'x.SMILES'
         columns = [chem["SMILES"] for chem in formulation["chemicals"]]
         dfs.append(pd.DataFrame(compositions, columns=columns))
     # Stack candidate samples and fill missing values with zeros
     candidates_df = pd.concat(dfs, axis=0, ignore_index=True).fillna(0)
-    # TODO: Drop duplicate candidates to save computation
     return candidates_df
 
 
-def get_best_candidates(config, df, constraints):
+def get_best_candidates(config, df_observed, constraints):
     """Get best candidates for each task and quantity.
 
     Args:
-        config (dict): Optimiser configuration.
-        df (pandas.DataFrame): Dataframe of observed results.
+        config (dict): Configuration.
+        df_observed (pandas.DataFrame): Dataframe of observed results.
         constraints (dict): Constraints for each task.
     Returns:
         Dict of best candidates for each task.
     """
-    # TODO: Handle empty and small dataframes
-    # TODO: Check df has the correct columns (chemicals and quantities)
-    # TODO: Results columns are 'x.SMILES' whereas candidate columns are just 'SMILES'
+    assert len(config["objectives"]) == 1, "Only support for one objective"
+    source_tasks = [t for t in config["tasks"] if t["source"]]
+    request_tasks = [t for t in config["tasks"] if t["request"]]
     candidate_list = []
-    for task in [t for t in config["tasks"] if t["request"]]:
+    for task in request_tasks:
         task_constraints_list = constraints[task["name"]]
         assert all(tc["method"] == task["method"] for tc in task_constraints_list)
         # Create dict of all chemicals included in the method constraints
@@ -257,24 +262,107 @@ def get_best_candidates(config, df, constraints):
         for task_constraints in task_constraints_list:
             for chemical in task_constraints["formulation"]["chemicals"]:
                 smiles_to_chemicals[chemical["SMILES"]] = chemical
-        # Get dataframe of candidates for the method
-        # TODO: Use config to set number of samples
-        candidates_df = get_candidates_from_constraints(task_constraints_list, num_samples=1)
-        # Get random candidate for the method
-        # TODO: Implement data-driven optimisation instead of random sampling
-        candidate_row = candidates_df.sample(n=1).squeeze()  # Sample one row as Series
-        # Extract chemicals and fractions from row
-        chemicals = [smiles_to_chemicals[smiles] for smiles in candidate_row.index]
-        fractions = candidate_row.values.tolist()
+        # Sample dataframe of candidates for the method
+        df_candidates = get_candidates_from_constraints(
+            task_constraints_list, num_samples=task["num_candidates"]
+        )
+        # Select candidate with the appropriate optimizer
+        if (
+            df_observed.empty or  # No data from any task
+            # task["name"] not in df_observed["task_name"].unique() or  # No data from this task
+            len(df_observed) < task["min_data_for_ml"]  # Not enough data to train a model
+        ):
+            # There is not enough data to train a model
+            # Use random optimizer
+            optimizer = RandomOptimizer()
+            candidate_row = optimizer.select_candidate(df_candidates)
+        elif (
+            df_observed["task_name"].nunique() == 1  # There is data from only one task
+            # task["name"] in df_observed["task_name"].unique()   # There is data from this task
+        ):
+            # There is data from only one task
+            # Use single-task single-objective optimizer
+            # (Even if data is not from this task)
+            # Prepare data for optimizer
+            objective = config["objectives"][0]
+            x_columns = [c for c in df_candidates.columns if c in smiles_to_chemicals.keys()]
+            y_column = objective["quantity"]
+            # Prepare data
+            assert any(c in df_observed.columns for c in x_columns), \
+                f"No {x_columns} in {df_observed.columns}"
+            assert y_column in df_observed.columns, f"{y_column} not in {df_observed.columns}"
+            # Insert missing columns in observed_df
+            for c in x_columns:
+                if c not in df_observed.columns:
+                    df_observed[c] = 0.0
+            # Standardize y column
+            df_observed[y_column] = df_observed[y_column] - df_observed[y_column].mean()
+            df_observed[y_column] = df_observed[y_column] / df_observed[y_column].std()
+            # Setup and run optimizer
+            optimizer = SingleTaskSingleObjectiveOptimizer(
+                x_columns=x_columns,
+                y_column=y_column,
+                maximize=objective["maximize"]
+            )
+            optimizer.fit(df_observed, training_steps=task["num_training_steps"])
+            _ = optimizer.evaluate(df_observed)  # Compute R^2 on the training data
+            candidate_row, _ = optimizer.select_candidate(df_candidates)
+        elif (
+            df_observed["task_name"].nunique() > 1 and  # There is data from multiple tasks
+            task["name"] in df_observed["task_name"].unique()   # There is data from this task
+        ):
+            # There is data from multiple tasks including this task
+            # Use multi-task single-objective optimizer
+            objective = config["objectives"][0]
+            x_columns = [c for c in df_candidates.columns if c in smiles_to_chemicals.keys()]
+            t_column = "task_id"
+            y_column = objective["quantity"]
+            # Prepare data
+            assert any(c in df_observed.columns for c in x_columns), \
+                f"No {x_columns} in {df_observed.columns}"
+            assert y_column in df_observed.columns, f"{y_column} not in {df_observed.columns}"
+            # Insert missing columns in observed_df
+            for c in x_columns:
+                if c not in df_observed.columns:
+                    df_observed[c] = 0.0
+            # Add t_column to observed_df and candidates_df
+            task_name_to_id = {t["name"]: i for i, t in enumerate(source_tasks)}
+            assert task["name"] in task_name_to_id, f"{task['name']} not in {task_name_to_id}"
+            df_observed[t_column] = df_observed["task_name"].map(task_name_to_id)
+            df_candidates[t_column] = task_name_to_id[task["name"]]
+            # Standardize y column
+            df_observed[y_column] = df_observed[y_column] - df_observed[y_column].mean()
+            df_observed[y_column] = df_observed[y_column] / df_observed[y_column].std()
+            # Setup and run optimizer
+            optimizer = MultiTaskSingleObjectiveOptimizer(
+                x_columns=x_columns,
+                t_column=t_column,
+                y_column=y_column,
+                maximize=objective["maximize"]
+            )
+            optimizer.fit(df_observed, training_steps=task["num_training_steps"])
+            _ = optimizer.evaluate(df_observed)  # Compute R^2 on the training data
+            candidate_row, _ = optimizer.select_candidate(df_candidates)
+        else:
+            # Could be that there is data from multiple tasks but not from this task
+            # In this case there is a need to specify what other task to base the prediction on
+            # Then could use the multi-task single-objective optimizer
+            assert False, "There is no optimizer for this case"
+        # Extract chemicals and fractions from selected candidate row
+        chemicals, fractions = [], []
+        for k, v in candidate_row.items():
+            if k in smiles_to_chemicals.keys():
+                chemicals.append(smiles_to_chemicals[k])
+                fractions.append(v)
         assert len(chemicals) == len(fractions)
         # Prepare candidate dict
-        candidate = {
+        candidate_dict = {
             "task": task,  # Task configuration
             "chemicals": chemicals,  # List of chemical dicts
             "fractions": fractions,  # List of fractions
             # "predictions": None,  # TODO: Include the predicted quantities?
         }
-        candidate_list.append(candidate)
+        candidate_list.append(candidate_dict)
     return candidate_list
 
 
@@ -282,7 +370,7 @@ def get_requests_from_candidate(config, candidate):
     """Prepare request from candidate.
 
     Args:
-        config (dict): Optimiser configuration.
+        config (dict): Configuration.
         candidate (dict): Candidate.
     Returns:
         List of requests.

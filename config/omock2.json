@@ -9,9 +9,21 @@
     ],
     "tasks": [
         {
-            "name": "mock_task",
+            "name": "mock_task_1",
             "quantities": {"mock_quantity": "mock_objective"},
             "method": "mock_method_1",
+            "source": true,
+            "request": true,
+            "parameters": {},
+            "max_queue_size": 99,
+            "num_candidates": 1000,
+            "min_data_for_ml": 1,
+            "num_training_steps": 200
+        },
+        {
+            "name": "mock_task_2",
+            "quantities": {"mock_quantity": "mock_objective"},
+            "method": "mock_method_2",
             "source": true,
             "request": true,
             "parameters": {},

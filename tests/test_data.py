@@ -291,9 +291,10 @@ class TestData(unittest.TestCase):
         }
         df = data.get_dataframe_from_results(config, results)
         self.assertEqual(len(df), 4)
-        self.assertIn("x.test_smiles_1", df.columns)
-        self.assertIn("x.test_smiles_2", df.columns)
-        self.assertIn("y.test_quantity_1", df.columns)
+        self.assertIn("test_smiles_1", df.columns)
+        self.assertIn("test_smiles_2", df.columns)
+        self.assertIn("test_quantity_1", df.columns)
+        self.assertIn("test_objective_1", df.columns)
         # self.assertIn("y.test_quantity_2", df.columns)  # TODO
         # import pandas as pd
         # pd.set_option('display.max_columns', None)
@@ -474,11 +475,14 @@ class TestData(unittest.TestCase):
         self.assertIn("test_smiles_2", candidates.columns)
         self.assertIn("test_smiles_3", candidates.columns)
 
-    def test_get_best_candidates(self):
+    def test_get_best_candidates_wo_data(self):
         config = {
             "name": "otest",
             "id": "test_id",
-            "objectives": [],
+            "objectives": [{
+                "quantity": "test_objective",
+                "maximize": True
+            }],
             "tasks": [{
                 "name": "test_task",
                 "quantities": {"test_quantity": "test_objective"},
@@ -486,7 +490,9 @@ class TestData(unittest.TestCase):
                 "source": True,
                 "request": True,
                 "parameters": {},
-                "max_queue_size": 1
+                "max_queue_size": 1,
+                "num_candidates": 100,
+                "min_data_for_ml": 1,
             }]
         }
         constraints = {"test_task": [
@@ -517,7 +523,81 @@ class TestData(unittest.TestCase):
                 }
             }
         ]}
-        df = pd.DataFrame()  # TODO: Add dataframe of observed data for data based approach
+        df = pd.DataFrame()  # Empty dataframe
+        candidates = data.get_best_candidates(config, df, constraints)
+        self.assertEqual(len(candidates), 1)
+        candidate = candidates[0]
+        self.assertEqual(candidate["task"]["name"], "test_task")
+
+    def test_get_best_candidates_w_data(self):
+        config = {
+            "name": "otest",
+            "id": "test_id",
+            "objectives": [{
+                "quantity": "test_objective",
+                "maximize": True
+            }],
+            "tasks": [{
+                "name": "test_task",
+                "quantities": {"test_quantity": "test_objective"},
+                "method": "test_method",
+                "source": True,
+                "request": True,
+                "parameters": {},
+                "max_queue_size": 1,
+                "num_candidates": 100,
+                "min_data_for_ml": 1,
+                "num_training_steps": 100,
+            }]
+        }
+        constraints = {"test_task": [
+            {
+                "quantity": "test_quantity",
+                "method": "test_method",
+                "formulation": {
+                    "chemicals": [
+                        {"SMILES": "test_smiles_1", "InChIKey": "test_inchi_1"},
+                        {"SMILES": "test_smiles_2", "InChIKey": "test_inchi_2"},
+                    ],
+                    "lower": [0.1, 0.1],
+                    "upper": [0.9, 0.9],
+                    "tolerance": [0.0, 0.0],
+                }
+            },
+            {
+                "quantity": "test_quantity",
+                "method": "test_method",
+                "formulation": {
+                    "chemicals": [
+                        {"SMILES": "test_smiles_2", "InChIKey": "test_inchi_2"},
+                        {"SMILES": "test_smiles_3", "InChIKey": "test_inchi_3"},
+                    ],
+                    "lower": [0.0, 0.0],
+                    "upper": [1.0, 1.0],
+                    "tolerance": [0.1, 0.1]
+                }
+            }
+        ]}
+        df = pd.DataFrame([
+            {
+                "task_name": "test_task",
+                "quantity": "test_quantity",
+                "method": "test_method",
+                "test_smiles_1": 0.1,
+                "test_smiles_2": 0.2,
+                "test_smiles_3": 0.7,
+                "test_objective": 0.014,
+            },
+            {
+                "task_name": "test_task",
+                "quantity": "test_quantity",
+                "method": "test_method",
+                "test_smiles_1": 0.2,
+                "test_smiles_2": 0.3,
+                "test_smiles_3": 0.5,
+                "test_objective": 0.03,
+            },
+        ])
         candidates = data.get_best_candidates(config, df, constraints)
         self.assertEqual(len(candidates), 1)
         candidate = candidates[0]
@@ -555,7 +635,10 @@ class TestData(unittest.TestCase):
         config = {
             "name": "otest",
             "id": "test_id",
-            "objectives": [],
+            "objectives": [{
+                "quantity": "test_objective",
+                "maximize": True
+            }],
             "tasks": [{
                 "name": "test_task",
                 "quantities": {"test_quantity": "test_objective"},
@@ -563,7 +646,9 @@ class TestData(unittest.TestCase):
                 "source": True,
                 "request": True,
                 "parameters": {},
-                "max_queue_size": 1
+                "max_queue_size": 1,
+                "num_candidates": 100,
+                "min_data_for_ml": 1,
             }]
         }
         limitations = {
@@ -609,29 +694,35 @@ class TestData(unittest.TestCase):
             "id": "mock_id",
             "objectives": [{
                 "quantity": "mock_objective",
-                "goal": "max"
+                "maximize": True
             }],
             "tasks": [{
                 "name": "mock_task",
                 "quantities": {"mock_quantity": "mock_objective"},
-                "method": "mock_method",
+                "method": "mock_method_1",
                 "source": True,
                 "request": True,
                 "parameters": {},
-                "max_queue_size": 1
+                "max_queue_size": 1,
+                "num_candidates": 100,
+                "min_data_for_ml": 1,
+                "num_training_steps": 100,
             }]
         }
         broker = MockBroker(authenticated=True, compute_results=False)
         raw_limitations = broker.get_limitations()
-        self.assertEqual(len(raw_limitations), 1)
+        self.assertEqual(len(raw_limitations), 2)
         self.assertEqual(len(raw_limitations[0]["limitations"]), 1)
+        self.assertEqual(len(raw_limitations[1]["limitations"]), 1)
         self.assertEqual(raw_limitations[0]["quantity"], "mock_quantity")
-        self.assertEqual(raw_limitations[0]["method"], "mock_method")
+        self.assertEqual(raw_limitations[0]["method"], "mock_method_1")
+        self.assertEqual(raw_limitations[1]["quantity"], "mock_quantity")
+        self.assertEqual(raw_limitations[1]["method"], "mock_method_2")
         limitations = {config["tasks"][0]["name"]: raw_limitations[0]}
         constraints = data.get_constraints_from_limitations(limitations)
         self.assertIn("mock_task", constraints)
         self.assertEqual(len(constraints["mock_task"]), 1)
-        results = broker.get_results(quantity="mock_quantity", method="mock_method")
+        results = broker.get_results(quantity="mock_quantity", method="mock_method_1")
         results = {"mock_task": {"mock_quantity": results}}
         df = data.get_dataframe_from_results(config, results)
         self.assertFalse(df.empty)
