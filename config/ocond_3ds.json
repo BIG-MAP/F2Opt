@@ -17,7 +17,7 @@
             "parameters": {},
             "max_queue_size": 1,
             "num_candidates": 1000,
-            "min_data_for_ml": 1,
+            "min_results_for_ml": 1,
             "num_training_steps": 200
         }
     ]

@@ -67,7 +67,7 @@ class TestData(unittest.TestCase):
                                     "internal_reference": "test_internal_reference_1"
                                 },
                                 "test_quantity_1": {
-                                    "values": [0.09],
+                                    "values": [0.090, 0.091],
                                     "temperature": 298,
                                     "meta": {"success": True, "rating": 1}
                                 }
@@ -290,12 +290,11 @@ class TestData(unittest.TestCase):
             }
         }
         df = data.get_dataframe_from_results(config, results)
-        self.assertEqual(len(df), 4)
+        self.assertEqual(len(df), 5)
         self.assertIn("test_smiles_1", df.columns)
         self.assertIn("test_smiles_2", df.columns)
         self.assertIn("test_quantity_1", df.columns)
         self.assertIn("test_objective_1", df.columns)
-        # self.assertIn("y.test_quantity_2", df.columns)  # TODO
         # import pandas as pd
         # pd.set_option('display.max_columns', None)
         # assert False, f"\n{str(df)}"
@@ -492,7 +491,7 @@ class TestData(unittest.TestCase):
                 "parameters": {},
                 "max_queue_size": 1,
                 "num_candidates": 100,
-                "min_data_for_ml": 1,
+                "min_results_for_ml": 1,
             }]
         }
         constraints = {"test_task": [
@@ -546,7 +545,7 @@ class TestData(unittest.TestCase):
                 "parameters": {},
                 "max_queue_size": 1,
                 "num_candidates": 100,
-                "min_data_for_ml": 1,
+                "min_results_for_ml": 1,
                 "num_training_steps": 100,
             }]
         }
@@ -580,6 +579,8 @@ class TestData(unittest.TestCase):
         ]}
         df = pd.DataFrame([
             {
+                "result_id": "test_result_id_1",
+                "request_id": "test_request_id_1",
                 "task_name": "test_task",
                 "quantity": "test_quantity",
                 "method": "test_method",
@@ -589,6 +590,8 @@ class TestData(unittest.TestCase):
                 "test_objective": 0.014,
             },
             {
+                "result_id": "test_result_id_2",
+                "request_id": "test_request_id_2",
                 "task_name": "test_task",
                 "quantity": "test_quantity",
                 "method": "test_method",
@@ -648,7 +651,7 @@ class TestData(unittest.TestCase):
                 "parameters": {},
                 "max_queue_size": 1,
                 "num_candidates": 100,
-                "min_data_for_ml": 1,
+                "min_results_for_ml": 1,
             }]
         }
         limitations = {
@@ -705,7 +708,7 @@ class TestData(unittest.TestCase):
                 "parameters": {},
                 "max_queue_size": 1,
                 "num_candidates": 100,
-                "min_data_for_ml": 1,
+                "min_results_for_ml": 1,
                 "num_training_steps": 100,
             }]
         }

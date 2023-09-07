@@ -148,7 +148,7 @@ def get_dataframe_from_results(config, results):
                 continue
             else:
                 # Create dataframe with results for the quantity
-                rows = [get_row_from_result(result) for result in results_list]
+                rows = [row for result in results_list for row in get_rows_from_result(result)]
                 quantity_df = pd.DataFrame(rows)
                 quantity_df["task_name"] = task["name"]
                 # Create objective column
@@ -171,39 +171,40 @@ def get_dataframe_from_results(config, results):
         df = pd.concat(task_dfs, axis=0, ignore_index=True)
         # Sort columns by name
         df = df.reindex(sorted(df.columns), axis=1)
-        assert df["result_id"].is_unique  # One row per result id
-        assert df["request_id"].is_unique  # One row per request id
         return df
 
 
-def get_row_from_result(result):
-    """Create row dict from a single result.
+def get_rows_from_result(result):
+    """Create list of row dicts from a single result.
+
+    A result can have multiple values for the same quantity.
 
     Args:
         result (dict): A single result in dict format.
     Returns:
-        A flat dict representing a dataframe row with the result.
+        A list of dicts representing dataframe rows with the results.
     """
     assert len(result["result"]["method"]) == 1
-    row = {}
+    quantity = result["result"]["quantity"]
+    row = {}  # Dict representing a dataframe row
     row["result_id"] = result["uuid"]
-    row["ctime"] = result["ctime"]
-    row["quantity"] = result["result"]["quantity"]
-    row["method"] = result["result"]["method"][0]
     # TODO: request_id is not the same as the request internal reference
     row["request_id"] = result["result"]["request_uuid"]
-    formulation = result["result"]["data"]["run_info"]["formulation"]
-    for formulation_component in formulation:
+    row["ctime"] = result["ctime"]
+    row["quantity"] = quantity
+    row["method"] = result["result"]["method"][0]
+    for formulation_component in result["result"]["data"]["run_info"]["formulation"]:
         smiles = formulation_component["chemical"]["SMILES"]
         fraction = formulation_component["fraction"]
         row[smiles] = fraction
-    quantity = result["result"]["data"][result["result"]["quantity"]]
-    # TODO: Here we use the mean value. Could create one row per value.
-    values = quantity["values"]
-    value = sum(values) / len(values)  # Compute the mean value
-    row[result["result"]["quantity"]] = value
-    row["temperature"] = quantity["temperature"]
-    return row
+    row["temperature"] = result["result"]["data"][quantity]["temperature"]
+    # Create one row per value in the result.
+    values = result["result"]["data"][quantity]["values"]  # List of measured values
+    rows = []
+    for value in values:
+        row[quantity] = value
+        rows.append(row.copy())
+    return rows
 
 
 # Requests
@@ -270,7 +271,7 @@ def get_best_candidates(config, df_observed, constraints):
         if (
             df_observed.empty or  # No data from any task
             # task["name"] not in df_observed["task_name"].unique() or  # No data from this task
-            len(df_observed) < task["min_data_for_ml"]  # Not enough data to train a model
+            df_observed["result_id"].nunique() < task["min_results_for_ml"]  # Not enough data
         ):
             # There is not enough data to train a model
             # Use random optimizer
