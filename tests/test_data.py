@@ -299,6 +299,188 @@ class TestData(unittest.TestCase):
         # pd.set_option('display.max_columns', None)
         # assert False, f"\n{str(df)}"
 
+    def test_get_dataframe_from_results_eol(self):
+        config = {
+            "name": "otest",
+            "id": "test_id",
+            "objectives": [],
+            "tasks": [
+                {
+                    "name": "test_task_1",
+                    "quantities": {
+                        "degradationEOL": "EOL"
+                    },
+                    "method": "degradation_workflow",
+                    "source": True,
+                    "request": True,
+                }
+            ]
+        }
+        results = {
+            "test_task_1": {
+                "degradationEOL": [
+                    {
+                        "uuid": "test_result_id_1",
+                        "ctime": "2023-08-01T12:01:00",
+                        "status": "original",
+                        "result": {
+                            "data": {
+                                "run_info": {
+                                    "formulation": [
+                                        {
+                                            "chemical": {
+                                                "SMILES": "test_smiles_1",
+                                                "InChIKey": "test_inchi_1"
+                                            },
+                                            "fraction": 1.0,
+                                            "fraction_type": "molPerMol"
+                                        }
+                                    ],
+                                    "internal_reference": "An ID assigned by the tenant",
+                                    "formulation_info": {},  # left out
+                                    "chemicals_info": {},  # left out
+                                },
+                                "degradationEOL": [
+                                    {
+                                        "end_of_life": 400,
+                                        "end_of_life_uncertainty": 5.9,
+                                        "capacity_trajectory": [3.2, 2.9, 2.6, 2.4, 2.0],
+                                        "capacity_trajectory_uncertainty": [
+                                            0.04, 0.009, 0.02, 0.0005, 0.01
+                                        ],
+                                        "meta": {"success": "True", "rating": 5},
+                                        "cell_info": {}  # left out
+                                    },
+                                    {
+                                        "end_of_life": 200,
+                                        "end_of_life_uncertainty": 2.9,
+                                        "capacity_trajectory": [2.2, 2.9, 2.6, 2.4, 2.0],
+                                        "capacity_trajectory_uncertainty": [
+                                            0.02, 0.004, 0.04, 0.0002, 0.04
+                                        ],
+                                        "meta": {"success": "True", "rating": 10},
+                                        "cell_info": {}  # left out
+                                    }
+                                ]
+                            },
+                            "quantity": "degradationEOL",
+                            "method": ["degradation_workflow"],
+                            "parameters": {},
+                            "tenant_uuid": "7337771802bd49d7ae8437d6bff2bfc2",
+                            "request_uuid": "e20ef4f7-179a-4715-acaa-e700386cd58e"
+                        }
+                    }
+                ]
+            }
+        }
+        df = data.get_dataframe_from_results(config, results)
+        self.assertEqual(len(df), 2)
+        self.assertIn("test_smiles_1", df.columns)
+        self.assertIn("degradationEOL", df.columns)
+        self.assertIn("EOL", df.columns)
+        # import pandas as pd
+        # pd.set_option('display.max_columns', None)
+        # assert False, f"\n{str(df)}"
+
+    def test_get_rows_from_result_default_format(self):
+        result = {
+            "uuid": "test_result_id_1",
+            "ctime": "2023-08-01T12:01:00",
+            "status": "original",
+            "result": {
+                "data": {
+                    "run_info": {
+                        "formulation": [
+                            {
+                                "chemical": {
+                                    "SMILES": "test_smiles_1",
+                                    "InChIKey": "test_inchi_1"
+                                },
+                                "fraction": 0.1,
+                                "fraction_type": "molPerMol"
+                            },
+                            {
+                                "chemical": {
+                                    "SMILES": "test_smiles_2",
+                                    "InChIKey": "test_inchi_2"
+                                },
+                                "fraction": 0.9,
+                                "fraction_type": "molPerMol"
+                            }
+                        ],
+                        "internal_reference": "test_internal_reference_1"
+                    },
+                    "test_quantity_1": {
+                        "values": [0.090, 0.091],
+                        "temperature": 298,
+                        "meta": {"success": True, "rating": 1}
+                    }
+                },
+                "quantity": "test_quantity_1",
+                "method": ["test_method_1"],
+                "parameters": {},  # left out
+                "tenant_uuid": "test_tenant_id",
+                "request_uuid": "test_request_id_1",
+            }
+        }
+        rows = data.get_rows_from_result(result)
+        self.assertEqual(len(rows), 2)
+        # import json
+        # assert False, json.dumps(rows, indent=2)
+
+    def test_get_rows_from_result_eol_format(self):
+        result = {
+            "uuid": "test_result_id_1",
+            "ctime": "2023-08-01T12:01:00",
+            "status": "original",
+            "result": {
+                "data": {
+                    "run_info": {
+                        "formulation": [
+                            {
+                                "chemical": {
+                                    "SMILES": "CCOC(=O)OC",
+                                    "InChIKey": "JBTWLSYIZRCDFO-UHFFFAOYSA-N"
+                                },
+                                "fraction": 1.0,
+                                "fraction_type": "molPerMol"
+                            }
+                        ],
+                        "internal_reference": "An ID assigned by the tenant",
+                        "formulation_info": {},  # left out
+                        "chemicals_info": {},  # left out
+                    },
+                    "degradationEOL": [
+                        {
+                            "end_of_life": 400,
+                            "end_of_life_uncertainty": 5.9,
+                            "capacity_trajectory": [3.2, 2.9, 2.6, 2.4, 2.0],
+                            "capacity_trajectory_uncertainty": [0.04, 0.009, 0.02, 0.0005, 0.01],
+                            "meta": {"success": "True", "rating": 5},
+                            "cell_info": {}  # left out
+                        },
+                        {
+                            "end_of_life": 200,
+                            "end_of_life_uncertainty": 2.9,
+                            "capacity_trajectory": [2.2, 2.9, 2.6, 2.4, 2.0],
+                            "capacity_trajectory_uncertainty": [0.02, 0.004, 0.04, 0.0002, 0.04],
+                            "meta": {"success": "True", "rating": 10},
+                            "cell_info": {}  # left out
+                        }
+                    ]
+                },
+                "quantity": "degradationEOL",
+                "method": ["degradation_workflow"],
+                "parameters": {},
+                "tenant_uuid": "7337771802bd49d7ae8437d6bff2bfc2",
+                "request_uuid": "e20ef4f7-179a-4715-acaa-e700386cd58e"
+            }
+        }
+        rows = data.get_rows_from_result(result)
+        self.assertEqual(len(rows), 2)
+        # import json
+        # assert False, json.dumps(rows, indent=2)
+
     def test_get_constraints_from_limitations(self):
         limitations = {
             "test_task": {
@@ -323,6 +505,43 @@ class TestData(unittest.TestCase):
                         "temperature": [{"min": 243, "max": 333}]
                     }
                 ]
+            }
+        }
+        constraints = data.get_constraints_from_limitations(limitations)
+        self.assertIn("test_task", constraints)
+        self.assertEqual(len(constraints["test_task"]), 1)
+        self.assertEqual(constraints["test_task"][0]["method"], "test_method")
+        self.assertEqual(constraints["test_task"][0]["quantity"], "test_quantity")
+        self.assertIn("formulation", constraints["test_task"][0])
+        formula_constraints = constraints["test_task"][0]["formulation"]
+        self.assertIn("chemicals", formula_constraints)
+        self.assertIn("lower", formula_constraints)
+        self.assertIn("upper", formula_constraints)
+        self.assertIn("tolerance", formula_constraints)
+        lengths = [len(formula_constraints[k]) for k in formula_constraints.keys()]
+        self.assertEqual(len(set(lengths)), 1)  # all lists have the same length
+        for lower, upper in zip(formula_constraints["lower"], formula_constraints["upper"]):
+            self.assertGreater(upper, lower)
+
+    def test_get_constraints_from_limitations_eol(self):
+        limitations = {
+            "test_task": {
+                "quantity": "test_quantity",
+                "method": "test_method",
+                "limitations": [{"battery_chemistry": {
+                    "electrolyte": [[
+                        {
+                            "chemical": {"SMILES": "test_smiles_1", "InChIKey": "test_inchi_1"},
+                            "fraction": [{"min": 0.0, "max": 1.0}],
+                            "fraction_type": "molPerMol"
+                        },
+                        {
+                            "chemical": {"SMILES": "test_smiles_2", "InChIKey": "test_inchi_2"},
+                            "fraction": [{"min": 0.0, "max": 1.0}],
+                            "fraction_type": "molPerMol"
+                        },
+                    ]],
+                }}]
             }
         }
         constraints = data.get_constraints_from_limitations(limitations)

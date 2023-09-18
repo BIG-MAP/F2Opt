@@ -43,7 +43,15 @@ def get_constraints_list_from_task_limitations(task):
     limitations = task["limitations"][0]
     # Extract constraints for each formulation limitations
     constraints_list = []
-    for formulation in limitations["formulation"]:
+    # The limitations format depends on the method
+    # TODO: Determine format from task["method"]
+    if "formulation" in limitations:
+        formulation_list = limitations["formulation"]
+    elif "battery_chemistry" in limitations and "electrolyte" in limitations["battery_chemistry"]:
+        formulation_list = limitations["battery_chemistry"]["electrolyte"]
+    else:
+        raise ValueError(f"Limitations format not supported: {limitations}")
+    for formulation in formulation_list:
         constraints_list.append({
             "quantity": task["quantity"],
             "method": task["method"],
@@ -184,7 +192,11 @@ def get_rows_from_result(result):
     Returns:
         A list of dicts representing dataframe rows with the results.
     """
+    assert "result" in result
+    assert "quantity" in result["result"]
+    assert "method" in result["result"]
     assert len(result["result"]["method"]) == 1
+    method = result["result"]["method"][0]
     quantity = result["result"]["quantity"]
     row = {}  # Dict representing a dataframe row
     row["result_id"] = result["uuid"]
@@ -192,18 +204,28 @@ def get_rows_from_result(result):
     row["request_id"] = result["result"]["request_uuid"]
     row["ctime"] = result["ctime"]
     row["quantity"] = quantity
-    row["method"] = result["result"]["method"][0]
+    row["method"] = method
     for formulation_component in result["result"]["data"]["run_info"]["formulation"]:
         smiles = formulation_component["chemical"]["SMILES"]
         fraction = formulation_component["fraction"]
         row[smiles] = fraction
-    row["temperature"] = result["result"]["data"][quantity]["temperature"]
     # Create one row per value in the result.
-    values = result["result"]["data"][quantity]["values"]  # List of measured values
     rows = []
-    for value in values:
-        row[quantity] = value
-        rows.append(row.copy())
+    # Result format depends on the method
+    if method == "degradation_workflow":
+        # Use end of life format
+        value_dicts = result["result"]["data"][quantity]  # List of dicts with measured values
+        for value_dict in value_dicts:
+            row[quantity] = value_dict["end_of_life"]
+            row[quantity + "_uncertainty"] = value_dict["end_of_life_uncertainty"]
+            rows.append(row.copy())
+    else:
+        # Use conductivity methods format for all other results
+        row["temperature"] = result["result"]["data"][quantity]["temperature"]
+        values = result["result"]["data"][quantity]["values"]  # List of measured values
+        for value in values:
+            row[quantity] = value
+            rows.append(row.copy())
     return rows
 
 
@@ -385,9 +407,17 @@ def get_requests_from_candidate(config, candidate):
             "fraction_type": "molPerMol"
         }
         formulation.append(formulation_component)
-    parameters = {
-        "formulation": formulation,
-    }
+    if task["method"] == "degradation_workflow":
+        # Use end of life format
+        parameters = {
+            "battery_chemistry": {"electrolyte": formulation},
+            "cell_info": {}
+        }
+    else:
+        # Use conductivity format for all other requests
+        parameters = {
+            "formulation": formulation
+        }
     # In mult-objective optimisation, create a request for each quantity
     # TODO: Add common reference to the requests, not yet implemented in the API
     # Use a common reference for the requests so they can be matched

@@ -1,0 +1,24 @@
+{
+    "name": "oeol",
+    "id": "00000000-0000-0000-0000-000000000000",
+    "objectives": [
+        {
+            "quantity": "EOL",
+            "maximize": true
+        }
+    ],
+    "tasks": [
+        {
+            "name": "EOL",
+            "quantities": {"degradationEOL": "EOL"},
+            "method": "degradation_workflow",
+            "source": true,
+            "request": true,
+            "parameters": {},
+            "max_queue_size": 1,
+            "num_candidates": 1000,
+            "min_results_for_ml": 1,
+            "num_training_steps": 200
+        }
+    ]
+}
