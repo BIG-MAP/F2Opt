@@ -168,7 +168,7 @@ def get_dataframe_from_results(config, results):
         return pd.DataFrame()
     else:
         # Stack task dataframes
-        df = pd.concat(task_dfs, axis=0, ignore_index=True)
+        df = pd.concat(task_dfs, axis=0, ignore_index=True).fillna(0)
         # Sort columns by name
         df = df.reindex(sorted(df.columns), axis=1)
         return df
