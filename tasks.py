@@ -2,6 +2,7 @@
 
 import logging
 import json
+from collections import defaultdict
 
 from invoke import task
 
@@ -62,6 +63,38 @@ def get_results(c, quantity=None, method=None):
     broker.authenticate()
     results = broker.get_results(quantity=quantity, method=method)
     print(json.dumps(results, indent=2))
+
+
+@task
+def get_dataframe(c, quantity=None, method=None, file_name=None):
+    broker = get_broker()
+    broker.authenticate()
+    results = broker.get_results(quantity=quantity, method=method)
+
+    results_dict = defaultdict(dict)
+    for result in results:
+        quantity = result["result"]["quantity"]
+        method = result["result"]["method"][0]
+        task_name = f"{quantity}-{method}"
+        if quantity not in results_dict[task_name]:
+            results_dict[task_name][quantity] = []
+        results_dict[task_name][quantity].append(result)
+
+    config = {
+        "tasks": [{
+            "name": task_name,
+            "quantities": {q: "y" for q in quantity_dict.keys()},
+            "source": True,
+        } for task_name, quantity_dict in results_dict.items()]
+    }
+
+    from src.data import get_dataframe_from_results
+    df = get_dataframe_from_results(config, results_dict)
+    import pandas as pd
+    pd.set_option('display.max_columns', None)
+    print(df)
+    if file_name:
+        df.to_csv(file_name)
 
 
 @task
