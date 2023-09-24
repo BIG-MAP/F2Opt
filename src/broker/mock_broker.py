@@ -128,7 +128,7 @@ class MockBroker:
                             "mock_quantity": {
                                 "values": [0.008],
                                 "temperature": 298,
-                                "meta": {"success": True, "rating": 1}
+                                "meta": {"success": True, "rating": 5}
                             }
                         },
                         "quantity": "mock_quantity",
@@ -200,7 +200,7 @@ class MockBroker:
                             "mock_quantity": {
                                 "values": [0.014],
                                 "temperature": 298,
-                                "meta": {"success": True, "rating": 1}
+                                "meta": {"success": True, "rating": 5}
                             }
                         },
                         "quantity": "mock_quantity",
@@ -370,7 +370,7 @@ class MockBroker:
                     "mock_quantity": {
                         "values": [result_value],
                         "temperature": 298,
-                        "meta": {"success": True, "rating": 1}
+                        "meta": {"success": True, "rating": 5}
                     }
                 },
                 "quantity": "mock_quantity",

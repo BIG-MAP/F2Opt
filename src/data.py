@@ -137,12 +137,13 @@ def get_constraints_from_fraction_limitations(fraction):
 # Results
 
 
-def get_dataframe_from_results(config, results):
+def get_dataframe_from_results(config, results, filter=True):
     """Create dataframe from results.
 
     Args:
         config (dict): Configuration.
         results (dict): Collection of task results in dict format.
+        filter (bool): Filter bad results.
     Returns:
         Dataframe with results.
     """
@@ -179,6 +180,10 @@ def get_dataframe_from_results(config, results):
         df = pd.concat(task_dfs, axis=0, ignore_index=True).fillna(0)
         # Sort columns by name
         df = df.reindex(sorted(df.columns), axis=1)
+        # Filter bad results
+        # TODO: Make filter configurable
+        if filter:
+            df = df[(df["status"] != "deleted") & df["success"] & (df["rating"] >= 3)]
         return df
 
 
@@ -203,6 +208,7 @@ def get_rows_from_result(result):
     # TODO: request_id is not the same as the request internal reference
     row["request_id"] = result["result"]["request_uuid"]
     row["ctime"] = result["ctime"]
+    row["status"] = result["status"]
     row["quantity"] = quantity
     row["method"] = method
     for formulation_component in result["result"]["data"]["run_info"]["formulation"]:
@@ -216,11 +222,18 @@ def get_rows_from_result(result):
         # Use end of life format
         value_dicts = result["result"]["data"][quantity]  # List of dicts with measured values
         for value_dict in value_dicts:
+            assert type(value_dict["meta"]["success"]) == bool, f"Success should be bool: {method}"
+            row["success"] = value_dict["meta"]["success"]
+            row["rating"] = int(value_dict["meta"]["rating"])
             row[quantity] = value_dict["end_of_life"]
             row[quantity + "_uncertainty"] = value_dict["end_of_life_uncertainty"]
             rows.append(row.copy())
     else:
         # Use conductivity methods format for all other results
+        assert type(result["result"]["data"][quantity]["meta"]["success"]) == bool, \
+            f"Success should be bool: {method}"
+        row["success"] = result["result"]["data"][quantity]["meta"]["success"]
+        row["rating"] = result["result"]["data"][quantity]["meta"]["rating"]
         row["temperature"] = result["result"]["data"][quantity]["temperature"]
         values = result["result"]["data"][quantity]["values"]  # List of measured values
         for value in values:

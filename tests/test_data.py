@@ -69,7 +69,7 @@ class TestData(unittest.TestCase):
                                 "test_quantity_1": {
                                     "values": [0.090, 0.091],
                                     "temperature": 298,
-                                    "meta": {"success": True, "rating": 1}
+                                    "meta": {"success": True, "rating": 5}
                                 }
                             },
                             "quantity": "test_quantity_1",
@@ -109,7 +109,7 @@ class TestData(unittest.TestCase):
                                 "test_quantity_1": {
                                     "values": [0.16],
                                     "temperature": 298,
-                                    "meta": {"success": True, "rating": 1}
+                                    "meta": {"success": True, "rating": 5}
                                 }
                             },
                             "quantity": "test_quantity_1",
@@ -151,7 +151,7 @@ class TestData(unittest.TestCase):
                 #                 "test_quantity_2": {
                 #                     "values": [0.09],
                 #                     "temperature": 298,
-                #                     "meta": {"success": True, "rating": 1}
+                #                     "meta": {"success": True, "rating": 5}
                 #                 }
                 #             },
                 #             "quantity": "test_quantity_2",
@@ -191,7 +191,7 @@ class TestData(unittest.TestCase):
                 #                 "test_quantity_2": {
                 #                     "values": [0.16],
                 #                     "temperature": 298,
-                #                     "meta": {"success": True, "rating": 1}
+                #                     "meta": {"success": True, "rating": 5}
                 #                 }
                 #             },
                 #             "quantity": "test_quantity_2",
@@ -235,7 +235,7 @@ class TestData(unittest.TestCase):
                                 "test_quantity_1": {
                                     "values": [0.09],
                                     "temperature": 298,
-                                    "meta": {"success": True, "rating": 1}
+                                    "meta": {"success": True, "rating": 5}
                                 }
                             },
                             "quantity": "test_quantity_1",
@@ -275,7 +275,7 @@ class TestData(unittest.TestCase):
                                 "test_quantity_1": {
                                     "values": [0.16],
                                     "temperature": 298,
-                                    "meta": {"success": True, "rating": 1}
+                                    "meta": {"success": True, "rating": 5}
                                 }
                             },
                             "quantity": "test_quantity_1",
@@ -348,7 +348,7 @@ class TestData(unittest.TestCase):
                                         "capacity_trajectory_uncertainty": [
                                             0.04, 0.009, 0.02, 0.0005, 0.01
                                         ],
-                                        "meta": {"success": "True", "rating": 5},
+                                        "meta": {"success": True, "rating": 5},
                                         "cell_info": {}  # left out
                                     },
                                     {
@@ -358,7 +358,7 @@ class TestData(unittest.TestCase):
                                         "capacity_trajectory_uncertainty": [
                                             0.02, 0.004, 0.04, 0.0002, 0.04
                                         ],
-                                        "meta": {"success": "True", "rating": 10},
+                                        "meta": {"success": True, "rating": 5},
                                         "cell_info": {}  # left out
                                     }
                                 ]
@@ -413,7 +413,7 @@ class TestData(unittest.TestCase):
                     "test_quantity_1": {
                         "values": [0.090, 0.091],
                         "temperature": 298,
-                        "meta": {"success": True, "rating": 1}
+                        "meta": {"success": True, "rating": 5}
                     }
                 },
                 "quantity": "test_quantity_1",
@@ -456,7 +456,7 @@ class TestData(unittest.TestCase):
                             "end_of_life_uncertainty": 5.9,
                             "capacity_trajectory": [3.2, 2.9, 2.6, 2.4, 2.0],
                             "capacity_trajectory_uncertainty": [0.04, 0.009, 0.02, 0.0005, 0.01],
-                            "meta": {"success": "True", "rating": 5},
+                            "meta": {"success": True, "rating": 5},
                             "cell_info": {}  # left out
                         },
                         {
@@ -464,7 +464,7 @@ class TestData(unittest.TestCase):
                             "end_of_life_uncertainty": 2.9,
                             "capacity_trajectory": [2.2, 2.9, 2.6, 2.4, 2.0],
                             "capacity_trajectory_uncertainty": [0.02, 0.004, 0.04, 0.0002, 0.04],
-                            "meta": {"success": "True", "rating": 10},
+                            "meta": {"success": True, "rating": 5},
                             "cell_info": {}  # left out
                         }
                     ]

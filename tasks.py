@@ -66,7 +66,7 @@ def get_results(c, quantity=None, method=None):
 
 
 @task
-def get_dataframe(c, quantity=None, method=None, file_name=None):
+def get_dataframe(c, quantity=None, method=None, file_name=None, filter=False):
     broker = get_broker()
     broker.authenticate()
     results = broker.get_results(quantity=quantity, method=method)
@@ -89,7 +89,7 @@ def get_dataframe(c, quantity=None, method=None, file_name=None):
     }
 
     from src.data import get_dataframe_from_results
-    df = get_dataframe_from_results(config, results_dict)
+    df = get_dataframe_from_results(config, results_dict, filter=filter)
     import pandas as pd
     pd.set_option('display.max_columns', None)
     print(df)
