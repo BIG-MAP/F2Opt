@@ -177,24 +177,24 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
         assert df_train[self.t_column].nunique() > 1, "There must be more than one task"
         self.tasks = df_train[self.t_column].unique().tolist()
         # Prepare training data
-        Xt_train = torch.tensor(
-            df_train[self.x_columns + [self.t_column]].values, dtype=torch.double)
+        X_train = torch.tensor(df_train[self.x_columns].values, dtype=torch.double)
+        t_train = torch.tensor(df_train[self.t_column].values, dtype=torch.long)
         y_train = torch.tensor(df_train[self.y_column].values, dtype=torch.double)
         # TODO: Standardize y and save the standardization parameters
         # Find best y_train for each task to use in the acquisition function
         self.best_y = {}
-        for t in self.tasks:
+        for i in self.tasks:
             if self.maximize:
-                self.best_y[t] = y_train[Xt_train[:, -1] == t].max()
+                self.best_y[i] = y_train[t_train == i].max()
             else:
-                self.best_y[t] = y_train[Xt_train[:, -1] == t].min()
+                self.best_y[i] = y_train[t_train == i].min()
         # Setup
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
-        self.model = MultiTaskGP(Xt_train, y_train, self.likelihood)
+        self.model = MultiTaskGP(X_train, t_train, y_train, self.likelihood)
         optimizer = torch.optim.Adam(self.model.parameters(), lr=0.1)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
         # Training loop
-        logger.info(f"Start training with {list(Xt_train.shape)} data for {training_steps} steps")
+        logger.info(f"Start training with {list(X_train.shape)} data for {training_steps} steps")
         self.likelihood.train()
         self.model.train()
         # TODO: Progress bar
@@ -202,8 +202,8 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
         self.losses = []
         for step in range(training_steps):
             optimizer.zero_grad()
-            output = self.model(Xt_train)
-            loss = -mll(output, y_train)
+            output = self.model(X_train, t_train)
+            loss = -mll(output, y_train, t_train)
             loss.backward()
             self.losses.append(loss.item())
             logging.debug(f"Step {step + 1:3d}/{training_steps},  Loss: {loss.item():.3f}")
@@ -219,16 +219,17 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
         """Predict the objective with the optimizer."""
         assert self.trained, "The optimizer must be trained first"
         assert df_test[self.t_column].dtype == "int64", "Task column must be integer"
-        for t in df_test[self.t_column].unique():
-            assert t in self.tasks, f"Task {t} not in known tasks {self.tasks}"
+        for i in df_test[self.t_column].unique():
+            assert i in self.tasks, f"Task {i} not in known tasks {self.tasks}"
         # Prepare test data
-        Xt_test = torch.tensor(df_test[self.x_columns + [self.t_column]].values, dtype=torch.double)
+        X_test = torch.tensor(df_test[self.x_columns].values, dtype=torch.double)
+        t_test = torch.tensor(df_test[self.t_column].values, dtype=torch.long)
         # Predict
         self.model.eval()
         self.likelihood.eval()
         with torch.no_grad(), gpytorch.settings.fast_pred_var():
-            f_pred = self.model(Xt_test)  # model posterior distribution
-            y_pred = self.likelihood(f_pred)  # posterior predictive distribution
+            f_pred = self.model(X_test, t_test)  # model posterior distribution
+            y_pred = self.likelihood(f_pred, t_test)  # posterior predictive distribution
             y_pred_mean = y_pred.mean
             y_pred_var = y_pred.variance
             y_pred_lower, y_pred_upper = y_pred.confidence_region()
@@ -240,8 +241,8 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
         """Evaluate the predictive performance of the optimizer."""
         assert self.trained, "The optimizer must be trained first"
         assert df_test[self.t_column].dtype == "int64", "Task column must be integer"
-        for t in df_test[self.t_column].unique():
-            assert t in self.tasks, f"Task {t} not in known tasks {self.tasks}"
+        for i in df_test[self.t_column].unique():
+            assert i in self.tasks, f"Task {i} not in known tasks {self.tasks}"
         # Prepare test data
         y_test = torch.tensor(df_test[self.y_column].values, dtype=torch.double)
         # TODO: standardize y_test if predictions are not de-standardized
@@ -260,19 +261,20 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
         assert self.trained, "The optimizer must be trained first"
         assert df_test[self.t_column].dtype == "int64", "Task column must be integer"
         assert len(df_test[self.t_column].unique()) == 1, "Only works for a single task"
-        t = df_test[self.t_column].unique().item()
-        assert t in self.tasks, f"Task {t} not in known tasks {self.tasks}"
+        i = df_test[self.t_column].unique().item()
+        assert i in self.tasks, f"Task {i} not in known tasks {self.tasks}"
         # Prepare test data
-        Xt_test = torch.tensor(df_test[self.x_columns + [self.t_column]].values, dtype=torch.double)
+        X_test = torch.tensor(df_test[self.x_columns].values, dtype=torch.double)
+        t_test = torch.tensor(df_test[self.t_column].values, dtype=torch.long)
         # Evaluate acquisition function
         self.model.eval()
         # acqf = botorch.acquisition.ExpectedImprovement(
         #     self.model, best_f=self.best_y[t], maximize=self.maximize
         # )
-        acqf = ExpectedImprovement(self.model, best_f=self.best_y[t], maximize=self.maximize)
+        acqf = ExpectedImprovement(self.model, best_f=self.best_y[i], maximize=self.maximize)
         with torch.no_grad(), gpytorch.settings.fast_pred_var():
             # acq = acqf(Xt_test.unsqueeze(1))  # Add a batch dimension required by botorch
-            acq = acqf(Xt_test)
+            acq = acqf(X_test, t_test)
         return acq
 
     def select_candidate(self, df_test):
@@ -290,6 +292,8 @@ class SingleTaskGP(gpytorch.models.ExactGP):
     """Single-task GP model."""
 
     def __init__(self, X_train, y_train, likelihood, covar_module=None, mean_module=None):
+        assert X_train.shape[0] == y_train.shape[0]
+        assert X_train.ndim == 2
         super().__init__(X_train, y_train, likelihood)
         # self.num_outputs = 1  # Part of the botorch API
         self.mean_module = mean_module or gpytorch.means.ConstantMean()
@@ -298,6 +302,7 @@ class SingleTaskGP(gpytorch.models.ExactGP):
         )
 
     def forward(self, X):
+        assert X.ndim == 2, "X is expected to be 2D"
         mean = self.mean_module(X)
         covar = self.covar_module(X)
         return gpytorch.distributions.MultivariateNormal(mean, covar)
@@ -314,36 +319,37 @@ class SingleTaskGP(gpytorch.models.ExactGP):
 class MultiTaskGP(gpytorch.models.ExactGP):
     """Multi-task GP model.
 
-    Based on: https://botorch.org/api/_modules/botorch/models/multitask.html#MultiTaskGP
+    Based on:
+    - https://docs.gpytorch.ai/en/latest/examples/03_Multitask_Exact_GPs/Hadamard_Multitask_GP_Regression.html  # noqa: E501
+    - https://botorch.org/api/_modules/botorch/models/multitask.html#MultiTaskGP
 
-    The botorch model wraps the kernel in a scale kernel, but I think that may be overparameterizing
-    the kernel, since it is also scaled by the task kernel (IndexKernel).
+    Note: The botorch model wraps the kernel in a scale kernel, but I think that may be
+    overparameterizing the kernel, since it is also scaled by the task kernel (IndexKernel).
 
     The tasks share noise and lengthscale parameters in the likelihood and data kernel,
     but are scaled differently through the task kernel.
     """
 
-    def __init__(self, Xt_train, y_train, likelihood, covar_module=None, mean_module=None):
-        # Expects the last column of Xt_train to be the task identifier
-        super().__init__(Xt_train, y_train, likelihood)
+    def __init__(self, X_train, t_train, y_train, likelihood, covar_module=None, mean_module=None):
+        assert X_train.shape[0] == t_train.shape[0] == y_train.shape[0]
+        assert X_train.ndim == 2
+        super().__init__((X_train, t_train), y_train, likelihood)
         # self.num_outputs = 1  # Part of the botorch API
         self.mean_module = mean_module or gpytorch.means.ConstantMean()
         # Feature covariance
         self.covar_module = covar_module or gpytorch.kernels.MaternKernel(
-            ard_num_dims=Xt_train.shape[-1] - 1  # Exclude the task column
+            ard_num_dims=X_train.shape[-1]
         )
         # Task covariance
-        self.tasks = Xt_train[:, -1].unique().to(dtype=torch.long).tolist()
+        self.tasks = t_train.unique().to(dtype=torch.long).tolist()
         num_tasks = len(self.tasks)
         self.task_covar_module = gpytorch.kernels.IndexKernel(num_tasks=num_tasks, rank=num_tasks)
 
-    def forward(self, Xt):
-        # Expects the last column of Xt to be the task column
-        assert Xt.ndim == 2, "Xt is expected to be 2D"
-        X = Xt[:, :-1]  # Feature columns
-        t = Xt[:, -1].to(dtype=torch.long)   # Task column
-        for task in t.unique():
-            assert task in self.tasks, f"Task {task} not in known tasks {self.tasks}"
+    def forward(self, X, t):
+        assert X.shape[0] == t.shape[0]
+        assert X.ndim == 2, "X is expected to be 2D"
+        for i in t.unique():
+            assert i in self.tasks, f"Task {i} not in known tasks {self.tasks}"
         mean = self.mean_module(X)
         covar = self.covar_module(X) * self.task_covar_module(t)
         return gpytorch.distributions.MultivariateNormal(mean, covar)
@@ -389,9 +395,9 @@ class ExpectedImprovement():
         self.maximize = maximize
         self.min_var = 1e-12
 
-    def forward(self, X):
+    def forward(self, X, *params, **kwargs):
         # Compute model posterior
-        mvn = self.model(X)
+        mvn = self.model(X, *params, **kwargs)
         # TODO: Apply the likelihood to include the noise?
         # mvn = self.model.likelihood(mvn)
         mean = mvn.mean
@@ -402,8 +408,8 @@ class ExpectedImprovement():
         ei = phi(u) + u * Phi(u)
         return sigma * ei
 
-    def __call__(self, X):
-        return self.forward(X)
+    def __call__(self, X, *params, **kwargs):
+        return self.forward(X, *params, **kwargs)
 
 
 def phi(x):
