@@ -163,13 +163,14 @@ class SingleTaskSingleObjectiveOptimizer(Optimizer):
 class MultiTaskSingleObjectiveOptimizer(Optimizer):
     """Multi-task single-objective optimizer."""
 
-    def __init__(self, x_columns, t_column, y_column, maximize=True):
+    def __init__(self, x_columns, t_column, y_column, maximize=True, separate_noise=False):
         super().__init__()
         self.x_columns = x_columns
         self.t_column = t_column
         self.y_column = y_column
         self.maximize = maximize
         self.trained = False
+        self.separate_noise = separate_noise
 
     def fit(self, df_train, training_steps=200):
         """Fit the optimizer with training data."""
@@ -189,7 +190,10 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
             else:
                 self.best_y[i] = y_train[t_train == i].min()
         # Setup
-        self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
+        if self.separate_noise:
+            self.likelihood = MultiTaskGaussianLikelihood(num_tasks=len(self.tasks))
+        else:
+            self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         self.model = MultiTaskGP(X_train, t_train, y_train, self.likelihood)
         optimizer = torch.optim.Adam(self.model.parameters(), lr=0.1)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
@@ -211,6 +215,7 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
         # Done training
         logger.info(f"Finished training in {time() - start_time:.2f} seconds")
         logger.info(f"Task correlation matrix:\n{self.model.task_correlation_matrix()}")
+        logger.info(f"Likelihood noise:\n{[n.detach().sqrt() for n in list(self.likelihood.noise)]}")
         logger.debug(f"Losses: {self.losses}")
         self.trained = True
         return self
@@ -285,7 +290,7 @@ class MultiTaskSingleObjectiveOptimizer(Optimizer):
         return df_test.iloc[index].copy(), index
 
 
-# GP models
+# Gaussian process models
 
 
 class SingleTaskGP(gpytorch.models.ExactGP):
@@ -378,6 +383,92 @@ class MultiTaskGP(gpytorch.models.ExactGP):
     #     # mvn = self.likelihood(self(X))
     #     posterior = botorch.posteriors.gpytorch.GPyTorchPosterior(distribution=mvn)
     #     return posterior
+
+
+# Likelihood functions
+
+
+class MultiTaskGaussianLikelihood(gpytorch.likelihoods._GaussianLikelihoodBase):
+    """Gaussian likelihood with a separate heteroskedastic noise model for each task.
+
+    Must inherit _GaussianLikelihoodBase to be compatible with gpytorch ExactMarginalLogLikelihood.
+
+    Tasks must be indexed by integers from 0 to num_tasks-1.
+    """
+
+    def __init__(self, num_tasks):
+        super().__init__(noise_covar=None)
+        # Create a separate GaussianLikelihood, i.e. a separate noise model, for each task
+        self.task_likelihoods = torch.nn.ModuleList(
+            [gpytorch.likelihoods.GaussianLikelihood() for _ in range(num_tasks)]
+        )
+
+    def _shaped_noise_covar(self, base_shape, *params, **kwargs):
+        # From _GaussianLikelihoodBase
+        raise NotImplementedError()
+
+    def expected_log_prob(self, target, input, *params, **kwargs):
+        # From _GaussianLikelihoodBase
+        raise NotImplementedError()
+
+    def forward(self, function_samples, t, *params, **kwargs):
+        # From _GaussianLikelihoodBase
+        raise NotImplementedError()
+        # assert function_samples.shape == t.shape
+        # noise = torch.zeros_like(function_samples)
+        # for i in t.unique():
+        #     noise[t == i] = self.task_likelihoods[t].noise
+        # return gpytorch.distributions.Normal(function_samples, noise.sqrt())
+
+    def log_marginal(self, observations, function_dist, *params, **kwargs):
+        # From _GaussianLikelihoodBase
+        raise NotImplementedError()
+
+    @property
+    def noise(self):
+        # From GaussianLikelihood
+        return [m.noise for m in self.task_likelihoods]
+
+    @noise.setter
+    def noise(self, value):
+        # From GaussianLikelihood
+        raise NotImplementedError
+
+    @property
+    def raw_noise(self):
+        # From GaussianLikelihood
+        raise NotImplementedError()
+
+    @raw_noise.setter
+    def raw_noise(self, value):
+        # From GaussianLikelihood
+        raise NotImplementedError
+
+    def marginal(self, function_dist, params):
+        """Analytic marginal.
+
+        Overwrite _GaussianLikelihoodBase.marginal() to use separate noise models for each task.
+        """
+        # When marginal is called by prediction_strategy in ExactGP.__call__,
+        # params is a list of the model training inputs.
+        # Otherwise, params is assumed to be the task indices.
+        if isinstance(params, list):
+            assert self.training is False  # eval mode
+            assert len(params) == 2, params
+            t = params[1].squeeze()
+        else:
+            assert isinstance(params, torch.Tensor)
+            assert len(params) == len(function_dist.mean)
+            t = params.squeeze()
+        # Prepare the noise covariance matrix
+        mean, covar = function_dist.mean, function_dist.lazy_covariance_matrix
+        noise = torch.zeros_like(mean)
+        for i in t.unique():
+            noise[t == i] = self.task_likelihoods[int(i)].noise
+        noise_covar = torch.diag(noise)
+        # Compute the marginal distribution by adding the noise covar to the data covar
+        full_covar = covar + noise_covar
+        return function_dist.__class__(mean, full_covar)
 
 
 # Acquisition functions

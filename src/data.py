@@ -374,7 +374,8 @@ def get_best_candidates(config, df_observed, constraints):
                 x_columns=x_columns,
                 t_column=t_column,
                 y_column=y_column,
-                maximize=objective["maximize"]
+                maximize=objective["maximize"],
+                separate_noise=True,
             )
             optimizer.fit(df_observed, training_steps=task["num_training_steps"])
             _ = optimizer.evaluate(df_observed)  # Compute R^2 on the training data
