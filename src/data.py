@@ -183,7 +183,8 @@ def get_dataframe_from_results(config, results, filter=True):
         # Filter bad results
         # TODO: Make filter configurable
         if filter:
-            df = df[(df["status"] != "deleted") & df["success"] & (df["rating"] >= 3)]
+            min_rating = task.get("min_data_rating", 0)
+            df = df[(df["status"] != "deleted") & df["success"] & (df["rating"] >= min_rating)]
         return df
 
 
@@ -234,6 +235,7 @@ def get_rows_from_result(result):
             f"Success should be bool: {method}"
         row["success"] = result["result"]["data"][quantity]["meta"]["success"]
         row["rating"] = result["result"]["data"][quantity]["meta"]["rating"]
+        # TODO: Temperature can be a number or a list of numbers
         row["temperature"] = result["result"]["data"][quantity]["temperature"]
         values = result["result"]["data"][quantity]["values"]  # List of measured values
         for value in values:
