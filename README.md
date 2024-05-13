@@ -22,3 +22,10 @@ The required Python packages are specified in `requirements.txt`.
 ## Tests
 
 Run tests with `$ python -m unittest`.
+
+
+## Acknowledgements
+
+This version of the software was developed by Jonas Busk (jbusk@dtu.dk), PhD, Scientific Software Developer, DTU Energy.
+
+Copyright © 2024 Technical University of Denmark
